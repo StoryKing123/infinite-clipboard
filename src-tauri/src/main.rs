@@ -118,7 +118,7 @@ fn listen_connection(socket: Arc<Mutex<UdpSocket>>, app: Arc<Mutex<&mut App>>) {
 fn main() {
     let quit = CustomMenuItem::new("quit".to_string(), "Quit");
     let hide = CustomMenuItem::new("hide".to_string(), "Hide");
-    let setting = CustomMenuItem::new("quit".to_string(), "Setting");
+    let setting = CustomMenuItem::new("setting".to_string(), "Setting");
 
     let tray_menu = SystemTrayMenu::new()
         .add_item(quit)
@@ -173,11 +173,12 @@ fn main() {
                     window.hide().unwrap();
                 }
                 "setting" => {
-                    tauri::WindowBuilder::new(
-                        app,
-                        "dashboard",
-                        tauri::WindowUrl::App("index.html".into()),
-                    );
+                    println!("setting");
+                    // tauri::WindowBuilder::new(
+                    //     app,
+                    //     "dashboard",
+                    //     tauri::WindowUrl::App("index.html".into()),
+                    // );
                 }
                 _ => {}
             },

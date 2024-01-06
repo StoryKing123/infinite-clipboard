@@ -2,10 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
-.logo.vite:hover {
-    filter: drop-shadow(0 0 2em #747bff);
+body{
+    height: 100vh;
 }
-
-.logo.react:hover {
-    filter: drop-shadow(0 0 2em #61dafb);
+#root{
+    height: 100vh;
 }

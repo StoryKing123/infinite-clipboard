@@ -44,11 +44,6 @@
                 "title": "infinite-paste",
                 "width": 800,
                 "height": 600
-            },
-            {
-              "label": "dashboard",
-              "title": "Dashboard",
-              "url": "dashboard.html"
             }
         ],
         "systemTray":{

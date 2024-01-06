@@ -55,6 +55,17 @@ function App() {
     const copyResult = useRef({ copyStarted: false, pasteStarted: false });
     // const clientID = useRef();
 
+    const handleClickMenuItem = (
+        key: string,
+        event: any,
+        keyPath: string[]
+    ) => {
+        console.log(key);
+        console.log(event);
+        console.log(keyPath);
+        setMenuIndex(key);
+    };
+
     const listenClipboard = async () => {
         if (!isListened.current) {
             window.clientId = getUuiD(32);
@@ -122,19 +133,9 @@ function App() {
     useUnmount(unlistenClipboard);
 
     //
-    const handleClickMenuItem = (
-        key: string,
-        event: any,
-        keyPath: string[]
-    ) => {
-        console.log(key);
-        console.log(event);
-        console.log(keyPath);
-        setMenuIndex(key);
-    };
+   
     useMount(() => {
-        initDB();
-        // loadConfig();
+        // initDB();
     });
 
     return (
