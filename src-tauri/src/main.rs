@@ -43,6 +43,7 @@ where
 struct MessagePayload {
     value: String,
     client_id: String,
+    id: String,
 }
 
 #[tauri::command]
@@ -55,6 +56,7 @@ fn set_client_id(id: &str, state: tauri::State<AppState>) {
 #[tauri::command]
 fn send_clipboard_event(
     value: &str,
+    id: &str,
     state: tauri::State<ClipboardState>,
     app_state: tauri::State<AppState>,
 ) {
@@ -63,6 +65,7 @@ fn send_clipboard_event(
     let connection = state.connection.clone();
     let socket = connection.lock().unwrap();
     let message_payload = MessagePayload {
+        id: String::from(id),
         value: String::from(value),
         client_id: app_state.client_id.lock().unwrap().to_string(),
     };

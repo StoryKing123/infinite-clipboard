@@ -3,7 +3,14 @@ import reactLogo from "./assets/react.svg";
 import { invoke } from "@tauri-apps/api/tauri";
 import { emit, listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useMount, useUnmount } from "ahooks";
-import { Tabs, Typography, Button, Menu, Layout } from "@arco-design/web-react";
+import {
+    Tabs,
+    Typography,
+    Button,
+    Menu,
+    Layout,
+    Notification,
+} from "@arco-design/web-react";
 import { useAtom } from "jotai";
 import "./App.css";
 import GeneralSetting from "./components/setting/generalSetting";
@@ -36,6 +43,10 @@ const style = {
     textAlign: "center",
     marginTop: 20,
 } as any;
+type ClipboardQueue = {
+    value: string;
+    id: string;
+}[];
 function App() {
     const [menuIndex, setMenuIndex] = useState("1");
     // const [atom] = useAtom(configAtom);
@@ -52,7 +63,8 @@ function App() {
     const unlistenClipboardEvent = useRef<UnlistenFn | null>(null);
     const unlistenPasteEvent = useRef<UnlistenFn | null>(null);
     const isListened = useRef(false);
-    const copyResult = useRef({ copyStarted: false, pasteStarted: false });
+    // const copyResult = useRef({ copyStarted: false, pasteStarted: false });
+    const clipboardQueue = useRef<ClipboardQueue>([]);
     // const clientID = useRef();
 
     const handleClickMenuItem = (
@@ -60,9 +72,9 @@ function App() {
         event: any,
         keyPath: string[]
     ) => {
-        console.log(key);
-        console.log(event);
-        console.log(keyPath);
+        // console.log(key);
+        // console.log(event);
+        // console.log(keyPath);
         setMenuIndex(key);
     };
 
@@ -80,41 +92,73 @@ function App() {
             unlistenPasteEvent.current = await listen(
                 "paste",
                 async (event) => {
-                    copyResult.current.pasteStarted = true;
+                    // copyResult.current.pasteStarted = true;
                     console.log(event);
                     console.log("paste");
-                    if ((copyResult.current.copyStarted = false)) {
-                    }
+                    console.log(clipboardQueue);
                     const payload = JSON.parse(event.payload as string) as {
                         clientId: string;
                         value: string;
+                        id: string;
                     };
+
                     if (payload.clientId !== window.clientId) {
-                        await writeText(payload.value);
+                        if (
+                            clipboardQueue.current.find((item) => {
+                                item.id !== payload.id;
+                            })
+                        ) {
+                            Notification.success({
+                                content: "copyed",
+                            });
+                            clipboardQueue.current.push({
+                                value: payload.value,
+                                id: payload.id,
+                            });
+                            console.log("write value:" + payload.value);
+                            await writeText(event.payload as string);
+                        }
                     }
                     setClipboard(async (promiseValue) => {
-                        // console.log(args);
                         let value = await promiseValue;
                         console.log(value);
 
                         return [...value, { value: payload.value }];
                     });
-
-                    //finished event
-                    copyResult.current.pasteStarted = false;
-                    copyResult.current.copyStarted = false;
-                    // event.event is the event name (useful if you want to use a single callback fn for multiple event types)
-                    // event.payload is the payload object
                 }
             );
 
             unlistenTextUpdate.current = await onTextUpdate((newText) => {
                 // text = newText;
+                console.log("start to paste");
                 console.log(newText);
-                copyResult.current.copyStarted = true;
+                let text = "";
+                let id = "";
+                // copyResult.current.copyStarted = true;
+                try {
+                    let textObj = JSON.parse(newText);
+                    id = textObj.id;
+                    text = textObj.value;
+                    if (
+                        clipboardQueue.current.find((item) => {
+                            item.id === id;
+                        })
+                    ) {
+                        return;
+                    }
+                } catch (error) {
+                    text = newText;
+                    id = getUuiD(32);
+                }
+
+                clipboardQueue.current.push({
+                    value: text,
+                    id: id,
+                });
                 invoke("send_clipboard_event", {
-                    value: newText,
-                    id: window.clientId,
+                    value: text,
+                    id: id,
+                    // created:'infinited-clipboard'
                 });
             });
             unlistenClipboardEvent.current = await startListening();
@@ -133,7 +177,7 @@ function App() {
     useUnmount(unlistenClipboard);
 
     //
-   
+
     useMount(() => {
         // initDB();
     });
