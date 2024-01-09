@@ -1,3 +1,5 @@
+import { invoke } from "@tauri-apps/api";
+
 /**
  * 生成一个用不重复的ID
  * @param { Number } randomLength
@@ -9,6 +11,19 @@ export function getUuiD(randomLength: number) {
             .substring(2, 2 + randomLength) + Date.now()
     ).toString(36);
 }
+
+export const setAppConfig = (config: Config) => {
+    console.log('update config')
+    invoke("update_config", {
+        configStr: JSON.stringify(config),
+    });
+};
+
+export const setClientId = (clientId: string) => {
+    invoke("set_client_id", {
+        id: window.clientId,
+    });
+};
 
 const setClipboard = () => {};
 

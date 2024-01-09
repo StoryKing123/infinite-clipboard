@@ -9,6 +9,7 @@ import {
     Layout,
     Menu,
     Notification,
+    Switch,
 } from "@arco-design/web-react";
 import { FC } from "react";
 import { useAtom } from "jotai";
@@ -29,7 +30,7 @@ const style = {
     textAlign: "center",
     marginTop: 20,
 } as any;
-type FormData = { port: number };
+type FormData = { port: number; address: string };
 const GeneralSetting: FC = () => {
     // const [config] = useAtom(configAtom);
     const [config, setConfig] = useAtom(configStorageStore);
@@ -39,9 +40,13 @@ const GeneralSetting: FC = () => {
         console.log(values);
         Notification.success({
             title: "保存成功",
-            content: "This is a success Notification!",
+            content: "",
         });
-        setConfig(async () => ({ ...config, port: values.port }));
+        setConfig(async () => ({
+            ...config,
+            port: +values.port,
+            ipAddress: values.address.split(","),
+        }));
     };
 
     if (!config) {
@@ -51,13 +56,15 @@ const GeneralSetting: FC = () => {
         <Tabs defaultActiveTab="1">
             <TabPane key="1" title="通用设置">
                 <Typography.Paragraph style={style}>
-                    {/* <Button type="primary">Hello Arco</Button>, */}
-                    <Form<{ port: number }>
+                    <Form<FormData>
                         form={form}
                         style={{ width: 600 }}
                         onSubmit={handleSubmit}
                         autoComplete="off"
-                        initialValues={{ port: config.port }}
+                        initialValues={{
+                            port: config.port,
+                            address: config.ipAddress.join(","),
+                        }}
                     >
                         <FormItem
                             label="传输方式"
@@ -76,8 +83,36 @@ const GeneralSetting: FC = () => {
                         <FormItem label="端口" field="port">
                             <Input />
                         </FormItem>
-                        <FormItem label="IP">
-                            <Input placeholder="请输入ip地址，默认0.0.0.0则发送广播" />
+                        <FormItem label="IP" field="address">
+                            <Input placeholder="请输入ip地址，默认255.255.255.255则发送广播" />
+                        </FormItem>
+
+                        <FormItem
+                            label="监听文本"
+                            field="listenTextt"
+                            triggerPropName="checked"
+                            // rules={[{ type: "boolean", true: true }]}
+                            style={{ textAlign: "left" }}
+                        >
+                            <Switch />
+                        </FormItem>
+                        <FormItem
+                            label="监听图片"
+                            field="listenPic"
+                            triggerPropName="checked"
+                            // rules={[{ type: "boolean", true: true }]}
+                            style={{ textAlign: "left" }}
+                        >
+                            <Switch />
+                        </FormItem>
+                        <FormItem
+                            label="监听文字"
+                            field="listenText"
+                            triggerPropName="checked"
+                            // rules={[{ type: "boolean", true: true }]}
+                            style={{ textAlign: "left" }}
+                        >
+                            <Switch />
                         </FormItem>
                         {/* <FormItem wrapperCol={{ offset: 5 }}>
                 <Checkbox>I have read the manual</Checkbox>

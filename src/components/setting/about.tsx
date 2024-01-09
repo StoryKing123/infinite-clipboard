@@ -4,7 +4,7 @@ const { Title, Paragraph, Text } = Typography;
 
 const About: FC = () => {
     return (
-        <div>
+        <div className="p-4">
             <Typography style={{ marginTop: -40 }}>
                 <Title>Infinite-paste</Title>
                 <Paragraph>
