@@ -209,8 +209,6 @@ function App() {
 
     return (
         <Layout className=" h-full">
-            {/* <Header>Header</Header> */}
-            332211445
             <Layout>
                 <Sider className="h-full ">
                     <div className="h-full flex flex-col">
@@ -237,9 +235,9 @@ function App() {
                 <Content>
                     <div className="container">
                         {menuIndex === "1" && <GeneralSetting></GeneralSetting>}
-                        {/* {menuIndex === "2" && <History></History>}
+                        {menuIndex === "2" && <History></History>}
                         {menuIndex === "3" && <Log></Log>}
-                        {menuIndex === "4" && <About></About>} */}
+                        {menuIndex === "4" && <About></About>}
                     </div>
                 </Content>
             </Layout>

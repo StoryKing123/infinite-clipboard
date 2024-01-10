@@ -19,7 +19,7 @@ use tauri::{
 use tauri_plugin_clipboard;
 
 struct ClipboardState {
-    connection: Arc<Mutex<UdpSocket>>,
+    connection: Arc<Mutex<Option<UdpSocket>>>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -74,18 +74,24 @@ fn send_clipboard_event(
     println!("{:?}", value);
     println!("start send");
     let connection = state.connection.clone();
-    let socket = connection.try_lock().unwrap();
+    println!("1");
+    let binding = connection.lock().unwrap();
+    let socket = binding.as_ref().unwrap();
+    println!("2");
+
     let message_payload = MessagePayload {
         id: String::from(id),
         value: String::from(value),
-        client_id: app_state.client_id.try_lock().unwrap().to_string(),
+        client_id: app_state.client_id.lock().unwrap().to_string(),
     };
+    println!("3 ");
+
     let json_body = json!(message_payload);
     let bytes = json_bytes(json_body);
     println!("111");
     let address = app_state
         .config
-        .try_lock()
+        .lock()
         .unwrap()
         .clone()
         .unwrap()
@@ -104,30 +110,22 @@ fn send_clipboard_event(
     println!("send event");
 }
 
-fn listen_connection(socket: Arc<Mutex<UdpSocket>>, app: Arc<Mutex<&mut App>>) {
+fn listen_connection(socket: UdpSocket, app: Arc<Mutex<AppHandle>>) {
     // let s1 = socket.clone();
     let app_context = app.lock().unwrap();
     let window = app_context.get_window("main").unwrap();
     let handle = app_context.app_handle();
 
+    // let s1 = socket.clone();
+    let udp_socket = socket;
+
+    // let shared_udp_socket = Arc::clone(&s1);
+
     thread::spawn(move || {
-        let s1 = socket.clone();
-        let udp_socket = s1.lock().unwrap();
         println!("socket clone");
-        // let udp_socket = UdpSocket::bind("127.0.0.1:8000").expect("bind failed");
-        // let udp_socket = UdpSocket::bind("0.0.0.0:8000").expect("bind failed");
-        // let udp_socket = UdpSocket::bind("127.0.0.1:8000").expect("bind failed");
         udp_socket.set_broadcast(true);
         let clipboard = handle.state::<tauri_plugin_clipboard::ClipboardManager>();
-        // app_context.emit_all("paste", "123");
-        // app_context.emit_all("11", "22");
         let state = handle.state::<AppState>().clone();
-
-        // let clipboard = app
-        //     .app_handle()
-        //     .state::<tauri_plugin_clipboard::ClipboardManager>();
-
-        // let socket = UdpSocket::bind("127.0.0.1:8080").expect("bind failed");
         loop {
             let mut buf = [0u8; 1024];
             let (amt, src) = udp_socket.recv_from(&mut buf).expect("recv_from failed");
@@ -135,14 +133,10 @@ fn listen_connection(socket: Arc<Mutex<UdpSocket>>, app: Arc<Mutex<&mut App>>) {
             let text = String::from_utf8(buf.to_vec());
             println!("get message {:?}", text);
             let port = state.config.lock().unwrap().clone().unwrap().port;
-            // let address = state.config.lock().unwrap().clone().unwrap().address;
             println!("port {:?}", port);
-            // clipboard.write_text(text.unwrap());
             let payload: MessagePayload =
                 serde_json::from_str(&String::from(text.clone().unwrap())).unwrap();
             window.emit("paste", text.clone().unwrap());
-
-            // tauri_plugin_clipboard::ClipboardManager::write_text(&self, text);
             buf.reverse();
             udp_socket.send_to(buf, &src).expect("send_to failed");
         }
@@ -163,14 +157,15 @@ fn main() {
 
     // let socket = UdpSocket::bind("127.0.0.1:9000").expect("bind failed");
     // let socket = UdpSocket::bind("0.0.0.0:8000").expect("bind failed");
-    let socket = UdpSocket::bind("0.0.0.0:8000").expect("bind failed");
-    socket.set_broadcast(true);
-    let socketData = Arc::new(Mutex::new(socket));
 
-    // let connection: TcpStream = TcpStream::connect("127.0.0.1:9000").unwrap();
+    // let socket = UdpSocket::bind("0.0.0.0:8000").expect("bind failed");
+    // socket.set_broadcast(true);
+    let socketData = Arc::new(Mutex::new(None));
+    // let read_data = Arc::clone(&socketData);
 
     tauri::Builder::default()
         .manage(ClipboardState {
+            // connection: socketData.clone(),
             connection: socketData.clone(),
         })
         .manage(AppState {
@@ -227,17 +222,31 @@ fn main() {
             commands::update_config
         ])
         .plugin(tauri_plugin_clipboard::init())
-        .setup(move |app| {
-            // let main_window = app.get_window("main").unwrap();
-            // let app_state = app.state::<AppState>();
-            // let mut clientid = app_state.client_id.lock().unwrap();
-            // *clientid = String::from("12344");
+        .setup(|app: &mut App| {
+            println!("app setup");
+            let handle = app.handle();
+            let state = handle.state::<ClipboardState>();
+            let app_state =handle.state::<AppState>();
+            println!("config:{:?}",app_state.config.lock().unwrap());
+            
+            // let socket = UdpSocket::bind("0.0.0.0:8000").expect("bind failed");
+            // socket.set_broadcast(true);
+            // *state.connection.lock().unwrap() = Some(socket);
+            // let socketData = Arc::new(Mutex::new(socket));
+            // state.connection = socketData;
+
             let arc_app = Arc::new(Mutex::new(app));
-            listen_connection(socketData.clone(), arc_app);
-            // let id = main_window.listen("set-client-id", |event| {
-            //     // *clientid = String::from("123");
-            //     println!("got window event-name with payload {:?}", event.payload());
-            // });
+            // let app1 = Arc::clone(&arc_app);
+            // let udp_socket = state
+            //     .connection
+            //     .clone()
+            //     .lock()
+            //     .unwrap()
+            //     .as_ref()
+            //     .unwrap()
+            //     .try_clone()
+            //     .unwrap();
+            // listen_connection(udp_socket, app1);
 
             Ok(())
         })
