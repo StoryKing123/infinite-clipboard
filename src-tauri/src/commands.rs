@@ -1,5 +1,7 @@
 use std::{
-    net::UdpSocket,
+    net::{SocketAddr, UdpSocket},
+    ops::Deref,
+    str::FromStr,
     sync::{Arc, Mutex},
 };
 
@@ -19,35 +21,40 @@ pub fn update_config(
 
     *state.config.lock().unwrap() = Some(config.clone());
 
-    println!("1");
-    //reset udp
-    // let connection = clip_state.connection.lock().unwrap();
-    // connection.unwrap().
-    let bind_address = format!("0.0.0.0:{:?}", config.port.unwrap());
-    // let bind_address = format!("0.0.0.0:8000", );
+    let mut arc_connection = Arc::clone(&clip_state.connection);
+    {
+        let mut connection = arc_connection.lock().unwrap();
 
-    println!("adddress:{:?}", bind_address);
-    // let socket = UdpSocket::bind("0.0.0.0:8000").expect("bind failed");
-    let socket = UdpSocket::bind(bind_address).expect("bind failed");
+        // let addr = connection.as_mut().unwrap().local_addr();
+        // match addr {
+        //     Ok(res) => {
+        //         println!("addr:{:?}", res);
+        //     }
+        //     Err(_) => todo!(),
+        // }
+        let bind_address =
+            SocketAddr::from_str(format!("0.0.0.0:{:?}", config.port.unwrap()).as_str()).unwrap();
+        if connection.is_some() {
+            let address = connection.as_ref().unwrap().local_addr().unwrap();
+            // let prev_address = SocketAddr::from_str(config.port.unwrap());
+            if address.eq(&bind_address) {
+                return ();
+            }
+        }
 
-    socket.set_broadcast(true);
-    // *state.connection.lock().unwrap() = Some(socket);
-    *clip_state.connection.lock().unwrap() = Some(socket);
+        let socket = UdpSocket::bind(bind_address).expect("bind failed");
 
-    let arc_app = Arc::new(Mutex::new(app));
-    let app1 = Arc::clone(&arc_app);
-    let udp_socket = clip_state
-        .connection
-        .clone()
-        .lock()
-        .unwrap()
-        .as_ref()
-        .unwrap()
-        .try_clone()
-        .unwrap();
+        // let clone_connection = Arc::clone(&clip_state.connection);
+        // let mut connection = clone_connection.lock().unwrap();
 
-    listen_connection(udp_socket, app1);
-    println!("2");
+        socket.set_broadcast(true);
+        *connection = None;
+        *connection = Some(socket);
+    }
+
+    listen_connection(app.clone());
+    // println!("4444");
+    // println!("2");
 
     ()
 }

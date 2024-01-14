@@ -73,7 +73,7 @@ function App() {
 
     const listenPasteEvent = async (event: Event<unknown>) => {
         // console.log(event);
-        console.log("paste");
+        console.log("paste event");
         const payload = JSON.parse(event.payload as string) as {
             clientId: string;
             value: string;
@@ -134,7 +134,7 @@ function App() {
 
             unlistenTextUpdate.current = await onTextUpdate((newText) => {
                 console.log("start to paste");
-                console.log(newText);
+                // console.log(newText);
                 let text = "";
                 let id = "";
                 // copyResult.current.copyStarted = true;
