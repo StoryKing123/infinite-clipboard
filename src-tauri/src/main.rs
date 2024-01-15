@@ -223,8 +223,11 @@ fn main() {
         ])
         .plugin(tauri_plugin_clipboard::init())
         .setup(|app: &mut App| {
+
+            
             println!("app setup");
             let handle = app.handle();
+            // handle.tray_handle().set_icon(icon)
             let state = handle.state::<ClipboardState>();
             let app_state = handle.state::<AppState>();
             println!("config:{:?}", app_state.config.lock().unwrap());
