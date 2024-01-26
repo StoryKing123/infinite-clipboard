@@ -36,7 +36,7 @@ pub struct ClipboardState {
 pub struct Config {
     port: Option<i16>,
     ip_address: Option<Vec<String>>,
-    quic_address:Option<i16>
+    quic_port:Option<i16>
 }
 pub struct AppState {
     client_id: Arc<Mutex<String>>,

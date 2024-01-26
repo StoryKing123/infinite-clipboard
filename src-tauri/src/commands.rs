@@ -9,7 +9,7 @@ use std::{
 };
 
 use app_udp::UDPBatchMessage;
-use s2n_quic::client::Connect;
+use s2n_quic::{client::Connect, provider::tls::default::config};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Error};
 use tauri::{AppHandle, Manager};
@@ -56,6 +56,7 @@ pub async fn update_config(
     println!("update config");
     println!("{:?}", config_str);
     let config: Config = serde_json::from_str(config_str).unwrap();
+    println!("{:?}",config);
 
     *state.config.lock().await = Some(config.clone());
 
@@ -81,12 +82,15 @@ pub async fn update_config(
     }
 
     {
-        let (serever, client) = build_quic_server_and_client(config.quic_address.unwrap()).unwrap();
-        let mut quic_client = state.quic_client.lock().await;
-        *quic_client = Some(client);
+        if config.quic_port.is_some() {
+            let (serever, client) =
+                build_quic_server_and_client(config.quic_port.unwrap()).unwrap();
+            let mut quic_client = state.quic_client.lock().await;
+            *quic_client = Some(client);
 
-        let mut quic_server = state.quic_server.lock().await;
-        *quic_server = Some(serever);
+            let mut quic_server = state.quic_server.lock().await;
+            *quic_server = Some(serever);
+        }
     }
     println!("start listen");
     listen_connection(app.clone()).await;
@@ -146,7 +150,7 @@ async fn handle_udp_message(buf: &[u8], src: SocketAddr, app: AppHandle) {
         UDPAction::SyncImage => {
             println!("get image");
             let respons = json_bytes(json!(UDPRequest {
-                value: Some(config.quic_address.unwrap().to_string()),
+                value: Some(config.quic_port.unwrap().to_string()),
                 client_id: payload.client_id,
                 id: payload.id,
                 action: UDPAction::SyncImageResponse,
@@ -161,7 +165,8 @@ async fn handle_udp_message(buf: &[u8], src: SocketAddr, app: AppHandle) {
             let mut quic_client = app_state.quic_client.lock().await;
             let ip = src.ip();
             let addr: SocketAddr =
-                SocketAddr::from_str(format!("{:?}:{:?}", ip, payload.value.unwrap()).as_str()).unwrap();
+                SocketAddr::from_str(format!("{:?}:{:?}", ip, payload.value.unwrap()).as_str())
+                    .unwrap();
             let connect = Connect::new(addr).with_server_name("localhost");
 
             println!("establish quic address:{:?}", &src);
