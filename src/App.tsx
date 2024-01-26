@@ -106,8 +106,10 @@ function App() {
                             content: "copyed",
                         });
                     }
+                    break;
                 }
                 case 1: {
+                    break;
                 }
             }
         }
