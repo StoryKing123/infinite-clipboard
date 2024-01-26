@@ -36,6 +36,7 @@ pub struct ClipboardState {
 pub struct Config {
     port: Option<i16>,
     ip_address: Option<Vec<String>>,
+    quic_address:Option<i16>
 }
 pub struct AppState {
     client_id: Arc<Mutex<String>>,
@@ -103,9 +104,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // let socket = UdpSocket::bind("0.0.0.0:8000").expect("bind failed");
     // let (server, client) = build_quic_server_and_client().unwrap();
 
-    let socket = UdpSocket::bind("0.0.0.0:7000").expect("bind failed");
-    socket.set_broadcast(true);
-    let socketData = Arc::new(Mutex::new(socket));
+    // let socket = UdpSocket::bind("0.0.0.0:7000").expect("bind failed");
+    // socket.set_broadcast(true);
+    // let socketData = Arc::new(Mutex::new(socket));
     // let read_data = Arc::clone(&socketData);
 
     tauri::Builder::default()

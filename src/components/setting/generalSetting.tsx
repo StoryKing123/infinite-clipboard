@@ -30,7 +30,7 @@ const style = {
     textAlign: "center",
     marginTop: 20,
 } as any;
-type FormData = { port: number; address: string };
+type FormData = { port: number; address: string; quicPort: number };
 const GeneralSetting: FC = () => {
     // const [config] = useAtom(configAtom);
     const [config, setConfig] = useAtom(configStorageStore);
@@ -46,6 +46,7 @@ const GeneralSetting: FC = () => {
             ...config,
             port: +values.port,
             ipAddress: values.address.split(","),
+            quicPort: values.quicPort,
         }));
     };
 
@@ -64,6 +65,7 @@ const GeneralSetting: FC = () => {
                         initialValues={{
                             port: config.port,
                             address: config.ipAddress.join(","),
+                            quicPort: config.quicPort,
                         }}
                     >
                         <FormItem
@@ -81,6 +83,9 @@ const GeneralSetting: FC = () => {
                             </Radio.Group>
                         </FormItem>
                         <FormItem label="端口" field="port">
+                            <Input />
+                        </FormItem> 
+                        <FormItem label="Quic端口" field="quicPort">
                             <Input />
                         </FormItem>
                         <FormItem label="IP" field="address">

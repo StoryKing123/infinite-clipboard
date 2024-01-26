@@ -22,6 +22,7 @@ const initConfig = () => {
         connectType: "UDP",
         port: 9000,
         ipAddress: ['255.255.255.255:8000'],
+        quicPort:9001
     };
     return newConfig;
 };

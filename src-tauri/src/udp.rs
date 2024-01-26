@@ -1,7 +1,7 @@
 use std::{
     error::Error,
     io,
-    net::{ToSocketAddrs, UdpSocket},
+    net::{SocketAddr, ToSocketAddrs, UdpSocket},
 };
 
 use s2n_quic::{Client, Server};
@@ -84,10 +84,11 @@ pub static CERT_PEM: &str = include_str!("../cert.pem");
 /// NOTE: this certificate is to be used for demonstration purposes only!
 pub static KEY_PEM: &str = include_str!("../key.pem");
 
-pub fn build_quic_server_and_client() -> Result<(Server, Client), Box<dyn Error>> {
+pub fn build_quic_server_and_client(listen_port: i16) -> Result<(Server, Client), Box<dyn Error>> {
+    println!("build quic server: 127.0.0.1:{:?}", listen_port);
     let mut server = Server::builder()
         .with_tls((CERT_PEM, KEY_PEM))?
-        .with_io("127.0.0.1:4433")?
+        .with_io(format!("127.0.0.1:{:?}", listen_port).as_str())?
         .start()?;
 
     let mut client = Client::builder()

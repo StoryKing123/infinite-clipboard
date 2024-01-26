@@ -81,7 +81,7 @@ pub async fn update_config(
     }
 
     {
-        let (serever, client) = build_quic_server_and_client().unwrap();
+        let (serever, client) = build_quic_server_and_client(config.quic_address.unwrap()).unwrap();
         let mut quic_client = state.quic_client.lock().await;
         *quic_client = Some(client);
 
@@ -137,7 +137,7 @@ async fn handle_udp_message(buf: &[u8], src: SocketAddr, app: AppHandle) {
 
     let text = String::from_utf8(buf.to_vec()).unwrap();
     let payload: UDPRequest = serde_json::from_str(&String::from(text.clone())).unwrap();
-
+    let config = app_state.config.lock().await.clone().unwrap();
     let window = app.get_window("main").unwrap();
     match payload.action {
         UDPAction::SyncText => {
@@ -146,25 +146,33 @@ async fn handle_udp_message(buf: &[u8], src: SocketAddr, app: AppHandle) {
         UDPAction::SyncImage => {
             println!("get image");
             let respons = json_bytes(json!(UDPRequest {
-                value: None,
+                value: Some(config.quic_address.unwrap().to_string()),
                 client_id: payload.client_id,
                 id: payload.id,
                 action: UDPAction::SyncImageResponse,
                 message_type: 1
             }));
-            udp_socket.send_to(&respons, &src);
+            println!("send response to {:?}", &src);
+            let res = udp_socket.send_to(&respons, &src).unwrap();
+            println!("{:?}", res);
         }
         UDPAction::SyncImageResponse => {
+            //send base64 image
             let mut quic_client = app_state.quic_client.lock().await;
-
-            let addr: SocketAddr = src;
+            let ip = src.ip();
+            let addr: SocketAddr =
+                SocketAddr::from_str(format!("{:?}:{:?}", ip, payload.value.unwrap()).as_str()).unwrap();
             let connect = Connect::new(addr).with_server_name("localhost");
+
+            println!("establish quic address:{:?}", &src);
+
             let mut connection = quic_client
                 .as_mut()
                 .unwrap()
                 .connect(connect)
                 .await
                 .unwrap();
+
             let stream = connection.open_bidirectional_stream().await.unwrap();
             let (mut receive_stream, mut send_stream) = stream.split();
             // let mut reader: &[u8] = b"hello";
@@ -182,6 +190,10 @@ async fn handle_udp_message(buf: &[u8], src: SocketAddr, app: AppHandle) {
             tokio::io::copy(&mut bytes.as_slice(), &mut send_stream)
                 .await
                 .unwrap();
+        }
+        UDPAction::SendImageByQuic => {
+            //receive base64 image
+            window.emit("pasteImage", text.clone());
         }
         UDPAction::SyncFile => {}
         _ => todo!(),

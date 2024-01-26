@@ -31,7 +31,7 @@ import {
 import { clipboardStorageStore, configStorageStore } from "./store";
 import History from "./components/setting/history";
 import Log from "./pages/log";
-import { CLIPBOARD_SOURCE_TYPE, CLIPBOARD_TYPE, VERSION } from "./global";
+import { CLIPBOARD_SOURCE_TYPE, CLIPBOARD_TYPE, UDPAction, UDPRequest, VERSION } from "./global";
 
 const Sider = Layout.Sider;
 const Header = Layout.Header;
@@ -61,6 +61,8 @@ function App() {
     const unlistenFileUpdate = useRef<UnlistenFn>(null);
     const unlistenClipboardEvent = useRef<UnlistenFn | null>(null);
     const unlistenPasteEvent = useRef<UnlistenFn | null>(null);
+    // const unlistenPasteImageEvent = useRef
+
     const isListened = useRef(false);
     // const copyResult = useRef({ copyStarted: false, pasteStarted: false });
     const clipboardQueue = useRef<ClipboardQueue>([]);
@@ -76,57 +78,65 @@ function App() {
     const listenPasteEvent = async (event: Event<unknown>) => {
         // console.log(event);
         console.log("paste event");
-        const payload = JSON.parse(event.payload as string) as {
-            clientId: string;
-            value: string;
-            id: string;
-            messageType: number;
-        };
+        const payload = JSON.parse(event.payload as string) as UDPRequest;
         console.log(clipboardQueue);
         console.log(payload);
-
-        if (payload.clientId !== window.clientId) {
-            // console.log(111);
-
-            switch (payload.messageType) {
-                case 0: {
-                    if (
-                        !clipboardQueue.current.find((item) => {
-                            return item.id === payload.id;
-                        })
-                    ) {
-                        console.log("push clip22");
-                        clipboardQueue.current.push({
-                            value: payload.value,
-                            id: payload.id,
-                        });
-                        console.log("write value:" + payload.value);
-                        await writeText(payload.value as string);
-                        Notification.success({
-                            content: "copyed",
-                        });
+        switch (payload.action) {
+            case UDPAction.SyncText: {
+                if (payload.clientId !== window.clientId) {
+                    switch (payload.messageType) {
+                        case 0: {
+                            if (
+                                !clipboardQueue.current.find((item) => {
+                                    return item.id === payload.id;
+                                })
+                            ) {
+                                console.log("push clip22");
+                                clipboardQueue.current.push({
+                                    value: payload.value,
+                                    id: payload.id,
+                                });
+                                console.log("write value:" + payload.value);
+                                await writeText(payload.value as string);
+                                Notification.success({
+                                    content: "copyed",
+                                });
+                            }
+                            break;
+                        }
+                        case 1: {
+                            break;
+                        }
                     }
                     break;
                 }
-                case 1: {
-                    break;
-                }
+                setClipboard(async (promiseValue) => {
+                    let value = await promiseValue;
+                    // console.log(value);
+                    return [
+                        ...value,
+                        {
+                            value: payload.value,
+                            type: CLIPBOARD_TYPE.TEXT,
+                            created: dayjs().unix(),
+                            sourceType: CLIPBOARD_SOURCE_TYPE.LOCAL,
+                            source: "local",
+                        },
+                    ];
+                });
+                break;
+            }
+            case UDPAction.SendImageByQuic: {
+                console.log("sync image");
+                listenPasteImageEvent(event);
+                console.log(payload);
+                break;
             }
         }
-        setClipboard(async (promiseValue) => {
-            let value = await promiseValue;
-            // console.log(value);
-            return [
-                ...value,
-                {
-                    value: payload.value,
-                    type: CLIPBOARD_TYPE.TEXT,
-                    created: dayjs().unix(),
-                    sourceType: CLIPBOARD_SOURCE_TYPE.LOCAL,
-                    source: "local",
-                },
-            ];
-        });
+    };
+
+    const listenPasteImageEvent = async (event: Event<unknown>) => {
+        console.log("paste image event");
     };
 
     const handleClickMenuItem = (

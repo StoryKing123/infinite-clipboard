@@ -52,7 +52,7 @@ const History: FC = () => {
                     className="mr   -auto"
                     type="button"
                     name="lang"
-                    defaultValue="0"
+                    defaultValue="0 "
                     style={{ marginRight: 20, marginBottom: 20 }}
                 >
                     <Radio value="0">所有</Radio>

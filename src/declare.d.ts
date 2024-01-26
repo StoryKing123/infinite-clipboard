@@ -6,8 +6,10 @@ interface Window {
 type Config = {
     connectType: "UDP" | "HTTP",
     port: number
+    quicPort:number
     ipAddress: string[]
 }
+
 
 
 
