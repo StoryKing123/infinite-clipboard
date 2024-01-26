@@ -9,11 +9,9 @@ type Config = {
     ipAddress: string[]
 }
 
-type ClipboardTextItem = {
-    value: string
-}
 
-type ClipboardType = ClipboardTextItem[]
+
+
 type Unsubscribe = () => void;
 interface AsyncStorage<Value> {
     getItem: (key: string, initialValue: Value) => PromiseLike<Value>;

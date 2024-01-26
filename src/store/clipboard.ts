@@ -1,5 +1,6 @@
 import { atomWithStorage } from 'jotai/utils'
 import localforage from "localforage";
+import { ClipboardType } from '../global';
 
 const loadClipboard = async () => {
     let clipboard = await localforage.getItem<ClipboardType>("clipboard");

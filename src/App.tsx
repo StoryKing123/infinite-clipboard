@@ -12,6 +12,7 @@ import {
     Notification,
 } from "@arco-design/web-react";
 import { useAtom } from "jotai";
+import dayjs from "dayjs";
 import "./App.css";
 import GeneralSetting from "./components/setting/generalSetting";
 import About from "./components/setting/about";
@@ -30,6 +31,7 @@ import {
 import { clipboardStorageStore, configStorageStore } from "./store";
 import History from "./components/setting/history";
 import Log from "./pages/log";
+import { CLIPBOARD_SOURCE_TYPE, CLIPBOARD_TYPE, VERSION } from "./global";
 
 const Sider = Layout.Sider;
 const Header = Layout.Header;
@@ -78,34 +80,50 @@ function App() {
             clientId: string;
             value: string;
             id: string;
+            messageType: number;
         };
         console.log(clipboardQueue);
         console.log(payload);
 
         if (payload.clientId !== window.clientId) {
             // console.log(111);
-            if (
-                !clipboardQueue.current.find((item) => {
-                    return item.id === payload.id;
-                })
-            ) {
-                console.log("push clip22");
 
-                clipboardQueue.current.push({
-                    value: payload.value,
-                    id: payload.id,
-                });
-                console.log("write value:" + payload.value);
-                await writeText(payload.value as string);
-                Notification.success({
-                    content: "copyed",
-                });
+            switch (payload.messageType) {
+                case 0: {
+                    if (
+                        !clipboardQueue.current.find((item) => {
+                            return item.id === payload.id;
+                        })
+                    ) {
+                        console.log("push clip22");
+                        clipboardQueue.current.push({
+                            value: payload.value,
+                            id: payload.id,
+                        });
+                        console.log("write value:" + payload.value);
+                        await writeText(payload.value as string);
+                        Notification.success({
+                            content: "copyed",
+                        });
+                    }
+                }
+                case 1: {
+                }
             }
         }
         setClipboard(async (promiseValue) => {
             let value = await promiseValue;
             // console.log(value);
-            return [...value, { value: payload.value }];
+            return [
+                ...value,
+                {
+                    value: payload.value,
+                    type: CLIPBOARD_TYPE.TEXT,
+                    created: dayjs().unix(),
+                    sourceType: CLIPBOARD_SOURCE_TYPE.LOCAL,
+                    source: "local",
+                },
+            ];
         });
     };
 
@@ -178,11 +196,19 @@ function App() {
                 });
             });
 
-            unlistenImageUpdate.current = await onImageUpdate(() => {
+            unlistenImageUpdate.current = await onImageUpdate((image) => {
                 console.log("copy image");
+                const id = getUuiD(32);
+
+                // console.log(image);
+                invoke("send_clipboard_image_event", {
+                    value: image,
+                    id: id,
+                });
             });
-            unlistenFileUpdate.current = await onFilesUpdate(() => {
+            unlistenFileUpdate.current = await onFilesUpdate((file) => {
                 console.log("copy file");
+                console.log(file);
             });
             unlistenClipboardEvent.current = await startListening();
         }
@@ -219,7 +245,7 @@ function App() {
                             mode="vertical"
                             onClickMenuItem={handleClickMenuItem}
                             defaultSelectedKeys={[menuIndex]}
-                        >   
+                        >
                             <MenuItem key="1">设置</MenuItem>
                             <MenuItem key="2">复制记录</MenuItem>
                             <MenuItem key="3">日志 </MenuItem>
@@ -228,7 +254,7 @@ function App() {
 
                         <div className="text-center mt-auto">
                             <div>Infinited-Clipboard</div>
-                            <div>0.0.1</div>
+                            <div>{VERSION}</div>
                         </div>
                     </div>
                 </Sider>

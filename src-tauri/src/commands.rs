@@ -1,60 +1,308 @@
 use std::{
     net::{SocketAddr, UdpSocket},
     ops::Deref,
+    process::id,
     str::FromStr,
-    sync::{Arc, Mutex},
+    sync::Arc,
+    thread,
+    time::{SystemTime, UNIX_EPOCH},
 };
 
-use serde_json::Error;
+use app_udp::UDPBatchMessage;
+use s2n_quic::client::Connect;
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Error};
+use tauri::{AppHandle, Manager};
 
-use crate::{listen_connection, AppState, ClipboardState, Config};
+use crate::{
+    json_bytes,
+    udp::{self as app_udp, build_quic_server_and_client},
+    AppState, ClipboardState, Config, UDPRequest,
+};
+
+#[derive(Debug, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct FilePendingItem {
+    id: String,
+    created_on: u128,
+    value: String,
+    ip_addr: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum UDPAction {
+    SyncText,
+    SyncImage,
+    SyncFile,
+    SyncImageResponse,
+    SendImageByQuic,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImageUdpRes {
+    id: String,
+    sync: bool,
+}
 
 #[tauri::command]
-pub fn update_config(
+pub async fn update_config(
     config_str: &str,
-    state: tauri::State<AppState>,
-    clip_state: tauri::State<ClipboardState>,
+    state: tauri::State<'_, AppState>,
+    clip_state: tauri::State<'_, ClipboardState>,
     app: tauri::AppHandle,
-) {
+) -> Result<(), ()> {
+    println!("update config");
     println!("{:?}", config_str);
     let config: Config = serde_json::from_str(config_str).unwrap();
 
-    *state.config.lock().unwrap() = Some(config.clone());
+    *state.config.lock().await = Some(config.clone());
 
     let mut arc_connection = Arc::clone(&clip_state.connection);
     {
-        let mut connection = arc_connection.lock().unwrap();
+        let mut connection = arc_connection.lock().await;
 
-        // let addr = connection.as_mut().unwrap().local_addr();
-        // match addr {
-        //     Ok(res) => {
-        //         println!("addr:{:?}", res);
-        //     }
-        //     Err(_) => todo!(),
-        // }
         let bind_address =
             SocketAddr::from_str(format!("0.0.0.0:{:?}", config.port.unwrap()).as_str()).unwrap();
         if connection.is_some() {
             let address = connection.as_ref().unwrap().local_addr().unwrap();
             // let prev_address = SocketAddr::from_str(config.port.unwrap());
             if address.eq(&bind_address) {
-                return ();
+                return Ok(());
             }
         }
 
         let socket = UdpSocket::bind(bind_address).expect("bind failed");
-
-        // let clone_connection = Arc::clone(&clip_state.connection);
-        // let mut connection = clone_connection.lock().unwrap();
 
         socket.set_broadcast(true);
         *connection = None;
         *connection = Some(socket);
     }
 
-    listen_connection(app.clone());
+    {
+        let (serever, client) = build_quic_server_and_client().unwrap();
+        let mut quic_client = state.quic_client.lock().await;
+        *quic_client = Some(client);
+
+        let mut quic_server = state.quic_server.lock().await;
+        *quic_server = Some(serever);
+    }
+    println!("start listen");
+    listen_connection(app.clone()).await;
     // println!("4444");
     // println!("2");
 
-    ()
+    Ok(())
+}
+
+// fn listen_connection(app: Arc<Mutex<AppHandle>>) {
+async fn listen_connection(app: AppHandle) {
+    let app_context = app;
+    let clip_state = app_context.state::<ClipboardState>();
+    let window = app_context.get_window("main").unwrap();
+    let handle = app_context.app_handle();
+    // let c = Arc::clone(&clip_state.connection);
+    let mut udp_socket = clip_state.connection.lock().await;
+    let mut udp_socket = udp_socket.as_mut().unwrap();
+    let udp_socket = udp_socket.try_clone().unwrap();
+    let app_copy = app_context.clone();
+    // udp_socket.set_broadcast(true);
+
+    // thread::spawn(move || async move {
+    tokio::spawn(async move {
+        // let clipboard = handle.state::<tauri_plugin_clipboard::ClipboardManager>();
+        let state = handle.clone().state::<AppState>().clone();
+        loop {
+            let mut buf = [0u8; 1024];
+            println!("start receive message");
+            let (amt, src) = udp_socket.recv_from(&mut buf).expect("recv_from failed");
+            let buf = &mut buf[..amt];
+            println!("receive message!");
+            handle_udp_message(buf, src, app_copy.clone()).await;
+        }
+    });
+}
+
+async fn handle_udp_message(buf: &[u8], src: SocketAddr, app: AppHandle) {
+    // return ();
+    let clip_state = app.state::<ClipboardState>();
+    // let window = app_context.get_window("main").unwrap();
+    let app_state = app.state::<AppState>();
+    // let handle = app.app_handle();
+    // let c = Arc::clone(&clip_state.connection);
+    let mut udp_socket = clip_state.connection.lock().await;
+
+    let udp_socket = udp_socket.as_mut().unwrap();
+
+    let text = String::from_utf8(buf.to_vec()).unwrap();
+    let payload: UDPRequest = serde_json::from_str(&String::from(text.clone())).unwrap();
+
+    let window = app.get_window("main").unwrap();
+    match payload.action {
+        UDPAction::SyncText => {
+            let res = window.emit("paste", text.clone());
+        }
+        UDPAction::SyncImage => {
+            println!("get image");
+            let respons = json_bytes(json!(UDPRequest {
+                value: None,
+                client_id: payload.client_id,
+                id: payload.id,
+                action: UDPAction::SyncImageResponse,
+                message_type: 1
+            }));
+            udp_socket.send_to(&respons, &src);
+        }
+        UDPAction::SyncImageResponse => {
+            let mut quic_client = app_state.quic_client.lock().await;
+
+            let addr: SocketAddr = src;
+            let connect = Connect::new(addr).with_server_name("localhost");
+            let mut connection = quic_client
+                .as_mut()
+                .unwrap()
+                .connect(connect)
+                .await
+                .unwrap();
+            let stream = connection.open_bidirectional_stream().await.unwrap();
+            let (mut receive_stream, mut send_stream) = stream.split();
+            // let mut reader: &[u8] = b"hello";
+            let queue = app_state.file_pending_queue.lock().await;
+            let image = queue.iter().find(|item| item.id == payload.id).unwrap();
+
+            let message = UDPRequest {
+                value: Some(image.value.to_string()),
+                client_id: payload.client_id,
+                id: payload.id,
+                action: UDPAction::SendImageByQuic,
+                message_type: 2,
+            };
+            let bytes = json_bytes(json!(message));
+            tokio::io::copy(&mut bytes.as_slice(), &mut send_stream)
+                .await
+                .unwrap();
+        }
+        UDPAction::SyncFile => {}
+        _ => todo!(),
+    }
+}
+
+#[tauri::command]
+pub async fn send_clipboard_event(
+    value: &str,
+    id: &str,
+    state: tauri::State<'_, ClipboardState>,
+    app_state: tauri::State<'_, AppState>,
+) -> Result<(), ()> {
+    // println!("{:?}", value);
+    println!("start send");
+
+    let connection = state.connection.clone();
+    let binding = connection.lock().await;
+    let socket = binding;
+
+    let message_payload = UDPRequest {
+        id: String::from(id),
+        value: Some(value.to_string()),
+        client_id: app_state.client_id.lock().await.to_string(),
+        action: UDPAction::SyncText,
+        message_type: 0,
+    };
+
+    let json_body = json!(message_payload);
+    println!("{:?}", json_body);
+    let bytes = json_bytes(json_body);
+    println!("{:?}", bytes);
+
+    let address = app_state
+        .config
+        .lock()
+        .await
+        .clone()
+        .unwrap()
+        .ip_address
+        .unwrap();
+
+    for ip in address {
+        println!("{:?}", &ip);
+        // let res = socket.send_to(&bytes, "255.255.255.255:8000");
+        let res = socket.as_ref().unwrap().send_to(&bytes, ip);
+        // socket.as_ref().unwrap().send
+        // let soc = UdpSocket::bind("0.0.0.0:1234").unwrap();
+        // soc.sen
+        println!("{:?}", res);
+    }
+    // let res = socket.send_to(value.as_bytes(), "255.255.255.255:8000");
+    // connection.write(value.as_bytes()).unwrap();
+    println!("send event");
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn send_clipboard_image_event(
+    value: &str,
+    id: &str,
+    state: tauri::State<'_, ClipboardState>,
+    app_state: tauri::State<'_, AppState>,
+) -> Result<(), ()> {
+    // println!("{:?}", value);
+    println!("start  send image");
+
+    // return();
+
+    let connection = state.connection.clone();
+    let binding = connection.lock().await;
+    let socket = binding;
+
+    let message_payload = UDPRequest {
+        id: String::from(id),
+        value: None,
+        action: UDPAction::SyncImage,
+        client_id: app_state.client_id.lock().await.to_string(),
+        message_type: 1,
+    };
+
+    let json_body = json!(message_payload);
+    let bytes = json_bytes(json_body);
+    let address = app_state
+        .config
+        .lock()
+        .await
+        .clone()
+        .unwrap()
+        .ip_address
+        .unwrap();
+
+    // 获取当前时间
+    let current_time = SystemTime::now();
+
+    // 获取 UNIX 时间戳（距离 UNIX 纪元的秒数）
+    let timestamp = current_time
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards");
+
+    // 打印结果
+    let current_timestamp = timestamp.as_millis();
+
+    let mut queue = app_state.file_pending_queue.lock().await;
+    queue.push(FilePendingItem {
+        id: String::from(id),
+        created_on: current_timestamp,
+        value: value.to_string(),
+        ip_addr: [].to_vec(),
+    });
+
+    for ip in address {
+        println!("{:?}", &ip);
+        // let res = socket.send_to(&bytes, "255.255.255.255:8000");
+        // let res = socket.as_ref().unwrap().send_to(&bytes, ip);
+        println!("{:?}", &bytes.len());
+        let res = socket.as_ref().unwrap().send_to(&bytes, ip);
+        println!("{:?}", res);
+    }
+    // let res = socket.send_to(value.as_bytes(), "255.255.255.255:8000");
+    // connection.write(value.as_bytes()).unwrap();
+    println!("send event");
+    Ok(())
 }

@@ -6,6 +6,7 @@ import {
     List,
     Notification,
     Radio,
+    Select,
 } from "@arco-design/web-react";
 import {
     IconEdit,
@@ -51,6 +52,52 @@ const History: FC = () => {
                     className="mr   -auto"
                     type="button"
                     name="lang"
+                    defaultValue="0"
+                    style={{ marginRight: 20, marginBottom: 20 }}
+                >
+                    <Radio value="0">所有</Radio>
+                    <Radio value="1">发送</Radio>
+                    <Radio value="2">接收</Radio>
+                    {/* <Radio value="Shanghai">文本</Radio>
+                    <Radio value="Guangzhou">图片</Radio>
+                    <Radio value="Shenzhen">文件</Radio> */}
+                </RadioGroup>
+
+                <div className=" ml-auto ">
+                    复制类型:
+                    <Select
+                        placeholder="Please select"
+                        style={{ width: 154 }}
+                        defaultValue={"所有"}
+                        onChange={
+                            (value) => {}
+                            // Message.info({
+                            //     content: `You select ${value}.`,
+                            //     showIcon: true,
+                            // })
+                        }
+                    >
+                        {["所有", "文本", "文件", "图片"].map(
+                            (option, index) => (
+                                <Select.Option
+                                    key={option}
+                                    // disabled={index === 3}
+                                    value={option}
+                                >
+                                    {option}
+                                </Select.Option>
+                            )
+                        )}
+                    </Select>
+                    {/* <Button type="primary">所有</Button>
+                    <Button type="primary">文本</Button>
+                    <Button type="primary">图片</Button>
+                    <Button type="primary">文件 </Button> */}
+                </div>
+                {/* <RadioGroup
+                    className="mr   -auto"
+                    type="button"
+                    name="lang"
                     defaultValue="Guangzhou"
                     style={{ marginRight: 20, marginBottom: 20 }}
                 >
@@ -58,9 +105,9 @@ const History: FC = () => {
                     <Radio value="Shanghai">文本</Radio>
                     <Radio value="Guangzhou">图片</Radio>
                     <Radio value="Shenzhen">文件</Radio>
-                </RadioGroup>
+                </RadioGroup> */}
                 <Button
-                    className="ml-auto"
+                    className=" ml-4"
                     type="secondary"
                     onClick={handleClearClipboard}
                 >
@@ -72,11 +119,6 @@ const History: FC = () => {
                 size="small"
                 header="复制记录"
                 dataSource={clipboard}
-                // render={render.bind(null, [
-                //     <span className="list-demo-actions-icon">
-                //         <IconDelete onClick={() => handleDelete(index)} />
-                //     </span>,
-                // ])}
                 render={(item, index) => (
                     <List.Item
                         // style={{ textAlign: "left" }}
