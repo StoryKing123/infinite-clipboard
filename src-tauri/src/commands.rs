@@ -155,8 +155,8 @@ async fn handle_udp_message(buf: &[u8], src: SocketAddr, app: AppHandle) {
             udp_socket.send_to(&respons, &src);
         }
         UDPAction::SyncImageResponse => {
+            //send base64 image
             let mut quic_client = app_state.quic_client.lock().await;
-
             let addr: SocketAddr = src;
             let connect = Connect::new(addr).with_server_name("localhost");
             let mut connection = quic_client
@@ -183,7 +183,13 @@ async fn handle_udp_message(buf: &[u8], src: SocketAddr, app: AppHandle) {
                 .await
                 .unwrap();
         }
-        UDPAction::SyncFile => {}
+        UDPAction::SendImageByQuic=>{
+            //receive base64 image
+            window.emit("pasteImage",text.clone());
+
+        }
+        UDPAction::SyncFile => {
+        }
         _ => todo!(),
     }
 }

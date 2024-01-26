@@ -23,3 +23,20 @@ export type ClipboardSingleItem = {
 }
 
 export type ClipboardType = ClipboardSingleItem[]
+
+
+export enum UDPAction {
+    SyncText = "syncText",
+    SyncImage = "syncImage",
+    SyncFile = "syncFile",
+    SyncImageResponse = "syncImageResponse",
+    SendImageByQuic = "sendImageByQuic"
+}
+
+export type UDPRequest = {
+    value: string | null,
+    clientId: string,
+    id: string,
+    action: UDPAction,
+    messageType: number,
+}
