@@ -61,7 +61,7 @@ where
     bytes
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize,Debug)]
 #[serde(rename_all = "camelCase")]
 struct UDPRequest {
     value: Option<String>,

@@ -9,10 +9,10 @@ use std::{
 };
 
 use app_udp::UDPBatchMessage;
-use s2n_quic::{client::Connect, provider::tls::default::config};
+use s2n_quic::{client::Connect};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Error};
-use tauri::{AppHandle, Manager};
+use tauri::{App, AppHandle, Manager};
 
 use crate::{
     json_bytes,
@@ -29,7 +29,7 @@ pub struct FilePendingItem {
     ip_addr: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub enum UDPAction {
     SyncText,
@@ -56,7 +56,7 @@ pub async fn update_config(
     println!("update config");
     println!("{:?}", config_str);
     let config: Config = serde_json::from_str(config_str).unwrap();
-    println!("{:?}",config);
+    println!("{:?}", config);
 
     *state.config.lock().await = Some(config.clone());
 
@@ -94,6 +94,7 @@ pub async fn update_config(
     }
     println!("start listen");
     listen_connection(app.clone()).await;
+    listen_quic_connection(app.clone()).await;
     // println!("4444");
     // println!("2");
 
@@ -141,6 +142,7 @@ async fn handle_udp_message(buf: &[u8], src: SocketAddr, app: AppHandle) {
 
     let text = String::from_utf8(buf.to_vec()).unwrap();
     let payload: UDPRequest = serde_json::from_str(&String::from(text.clone())).unwrap();
+    println!("{:?}", payload);
     let config = app_state.config.lock().await.clone().unwrap();
     let window = app.get_window("main").unwrap();
     match payload.action {
@@ -164,9 +166,11 @@ async fn handle_udp_message(buf: &[u8], src: SocketAddr, app: AppHandle) {
             //send base64 image
             let mut quic_client = app_state.quic_client.lock().await;
             let ip = src.ip();
+            let port = payload.value.unwrap().parse::<i16>().unwrap();
+            println!("{}", format!("{:?}:{:?}", ip, port));
+
             let addr: SocketAddr =
-                SocketAddr::from_str(format!("{:?}:{:?}", ip, payload.value.unwrap()).as_str())
-                    .unwrap();
+                SocketAddr::from_str(format!("{:?}:{:?}", ip, port).as_str()).unwrap();
             let connect = Connect::new(addr).with_server_name("localhost");
 
             println!("establish quic address:{:?}", &src);
@@ -203,6 +207,36 @@ async fn handle_udp_message(buf: &[u8], src: SocketAddr, app: AppHandle) {
         UDPAction::SyncFile => {}
         _ => todo!(),
     }
+}
+
+async fn listen_quic_connection(app: AppHandle) {
+    println!("start listen quic connection");
+    let state = app.state::<AppState>();
+    let mut server = &state.quic_server;
+    let mut s = Arc::clone(server);
+    // let mut server = server.as_mut().unwrap();
+    // let server = server
+    tokio::spawn( async move {
+        // let state = state.clone();
+        let mut s = s.lock().await;
+        let mut s = s.as_mut().unwrap();
+        while let Some(mut connection) = s.accept().await {
+
+            while let Ok(Some(mut event)) = connection.accept().await {
+                tokio::spawn(async move {
+                    while let Ok(Some(data)) = event.receive().await {
+                        let data = data;
+                        println!("receive quic data");
+                        println!("data{:?}", String::from_utf8(data.to_vec()));
+                        event.send_data("ok".into());
+                    }
+
+                    ()
+                });
+            }
+        };
+        ()
+    });
 }
 
 #[tauri::command]

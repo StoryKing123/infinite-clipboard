@@ -46,7 +46,7 @@ const GeneralSetting: FC = () => {
             ...config,
             port: +values.port,
             ipAddress: values.address.split(","),
-            quicPort: values.quicPort,
+            quicPort: +values.quicPort,
         }));
     };
 
