@@ -88,7 +88,8 @@ pub fn build_quic_server_and_client(listen_port: i16) -> Result<(Server, Client)
     println!("build quic server: 127.0.0.1:{:?}", listen_port);
     let mut server = Server::builder()
         .with_tls((CERT_PEM, KEY_PEM))?
-        .with_io(format!("127.0.0.1:{:?}", listen_port).as_str())?
+        // .with_io(format!("127.0.0.1:{:?}", listen_port).as_str())?
+        .with_io(format!("0.0.0.0:{:?}", listen_port).as_str())?
         .start()?;
 
     let mut client = Client::builder()

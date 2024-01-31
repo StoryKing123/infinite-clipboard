@@ -9,7 +9,7 @@ use std::{
 };
 
 use app_udp::UDPBatchMessage;
-use s2n_quic::{client::Connect};
+use s2n_quic::client::Connect;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Error};
 use tauri::{App, AppHandle, Manager};
@@ -120,10 +120,9 @@ async fn listen_connection(app: AppHandle) {
         let state = handle.clone().state::<AppState>().clone();
         loop {
             let mut buf = [0u8; 1024];
-            println!("start receive message");
+            println!("start receive message ....");
             let (amt, src) = udp_socket.recv_from(&mut buf).expect("recv_from failed");
             let buf = &mut buf[..amt];
-            println!("receive message!");
             handle_udp_message(buf, src, app_copy.clone()).await;
         }
     });
@@ -142,7 +141,7 @@ async fn handle_udp_message(buf: &[u8], src: SocketAddr, app: AppHandle) {
 
     let text = String::from_utf8(buf.to_vec()).unwrap();
     let payload: UDPRequest = serde_json::from_str(&String::from(text.clone())).unwrap();
-    println!("{:?}", payload);
+    println!("receive message! payload:{:?}", payload);
     let config = app_state.config.lock().await.clone().unwrap();
     let window = app.get_window("main").unwrap();
     match payload.action {
@@ -151,14 +150,15 @@ async fn handle_udp_message(buf: &[u8], src: SocketAddr, app: AppHandle) {
         }
         UDPAction::SyncImage => {
             println!("get image");
-            let respons = json_bytes(json!(UDPRequest {
+            let payload = json!(UDPRequest {
                 value: Some(config.quic_port.unwrap().to_string()),
                 client_id: payload.client_id,
                 id: payload.id,
                 action: UDPAction::SyncImageResponse,
                 message_type: 1
-            }));
-            println!("send response to {:?}", &src);
+            });
+            let respons = json_bytes(payload.clone());
+            println!("send response to {:?},payload:{:?}", &src, payload.clone());
             let res = udp_socket.send_to(&respons, &src).unwrap();
             println!("{:?}", res);
         }
@@ -167,13 +167,26 @@ async fn handle_udp_message(buf: &[u8], src: SocketAddr, app: AppHandle) {
             let mut quic_client = app_state.quic_client.lock().await;
             let ip = src.ip();
             let port = payload.value.unwrap().parse::<i16>().unwrap();
-            println!("{}", format!("{:?}:{:?}", ip, port));
 
             let addr: SocketAddr =
                 SocketAddr::from_str(format!("{:?}:{:?}", ip, port).as_str()).unwrap();
             let connect = Connect::new(addr).with_server_name("localhost");
 
-            println!("establish quic address:{:?}", &src);
+            println!(
+                "establish quic address:{:?}",
+                format!("{:?}:{:?}", ip, port)
+            );
+            let client_id = app_state.client_id.lock().await;
+            if addr
+                .ip()
+                .eq(&SocketAddr::from_str("192.168.5.4:8001").unwrap().ip())
+            {
+                println!("skip");
+                return ();
+            }
+            // if *client_id == payload.client_id {
+            //     return ();
+            // }
 
             let mut connection = quic_client
                 .as_mut()
@@ -182,6 +195,7 @@ async fn handle_udp_message(buf: &[u8], src: SocketAddr, app: AppHandle) {
                 .await
                 .unwrap();
 
+            connection.keep_alive(true);
             let stream = connection.open_bidirectional_stream().await.unwrap();
             let (mut receive_stream, mut send_stream) = stream.split();
             // let mut reader: &[u8] = b"hello";
@@ -196,9 +210,14 @@ async fn handle_udp_message(buf: &[u8], src: SocketAddr, app: AppHandle) {
                 message_type: 2,
             };
             let bytes = json_bytes(json!(message));
+
+            // tokio::spawn(async move {
+            println!("send quic request start");
             tokio::io::copy(&mut bytes.as_slice(), &mut send_stream)
                 .await
                 .unwrap();
+            println!("sendd quic requestt finished")
+            // });
         }
         UDPAction::SendImageByQuic => {
             //receive base64 image
@@ -210,17 +229,22 @@ async fn handle_udp_message(buf: &[u8], src: SocketAddr, app: AppHandle) {
 }
 
 async fn listen_quic_connection(app: AppHandle) {
-    println!("start listen quic connection");
     let state = app.state::<AppState>();
     let mut server = &state.quic_server;
+    println!(
+        "start listen quic connection:{:?}",
+        server.lock().await.as_mut().unwrap().local_addr()
+    );
+
     let mut s = Arc::clone(server);
     // let mut server = server.as_mut().unwrap();
     // let server = serv23
-    tokio::spawn( async move {
+    tokio::spawn(async move {
         // let state = state.clone();
         let mut s = s.lock().await;
         let mut s = s.as_mut().unwrap();
         while let Some(mut connection) = s.accept().await {
+            println!("accept quic data");
 
             while let Ok(Some(mut event)) = connection.accept().await {
                 tokio::spawn(async move {
@@ -234,7 +258,7 @@ async fn listen_quic_connection(app: AppHandle) {
                     ()
                 });
             }
-        };
+        }
         ()
     });
 }
@@ -350,6 +374,7 @@ pub async fn send_clipboard_image_event(
         // let res = socket.as_ref().unwrap().send_to(&bytes, ip);
         println!("{:?}", &bytes.len());
         let res = socket.as_ref().unwrap().send_to(&bytes, ip);
+
         println!("{:?}", res);
     }
     // let res = socket.send_to(value.as_bytes(), "255.255.255.255:8000");
