@@ -24,8 +24,8 @@ import { UnlistenFn } from "@tauri-apps/api/event";
 function App() {
   const [greetMsg, setGreetMsg] = useState("");
   const [name, setName] = useState("");
-  const unlistenClipboard = useRef<() => Promise<void>>();
-  const unlistenTextUpdate = useRef<UnlistenFn>();
+  const unlistenClipboard = useRef<() => Promise<void> >(undefined);
+  const unlistenTextUpdate = useRef<UnlistenFn>(undefined);
 
   const listen = async () => {
     unlistenTextUpdate.current = await onTextUpdate((newText) => {
@@ -90,6 +90,10 @@ function App() {
           placeholder="Enter a name..."
         />
         <button type="submit">Greet</button>
+        <button onClick={async () => {
+          const res = await fetch('http://infiniteclipboard.local/callback');
+          res.json()
+        }}>call</button>
       </form>
       <p>{greetMsg}</p>
     </main>
