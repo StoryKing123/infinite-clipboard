@@ -10,11 +10,17 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@nextui-org/react": "^2.6.10",
     "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-http": "~2",
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-sql": "^2.2.0",
+    "axios": "^1.7.9",
+    "framer-motion": "^11.15.0",
+    "jotai": "^2.11.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-toastify": "^11.0.2",
     "tauri-plugin-clipboard-api": "^2.1.11"
   },
   "devDependencies": {
@@ -22,6 +28,9 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
     "typescript": "~5.6.2",
     "vite": "^6.0.3"
   }
