@@ -3,6 +3,7 @@ use tauri::{
     http::{self, Response},
     Emitter, Listener, Manager, Url,
 };
+use tauri_plugin_log::{Target, TargetKind};
 use tauri_plugin_sql::{Migration, MigrationKind};
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -79,6 +80,11 @@ pub fn run() {
                 // .add_migrations("sqlite:app.db", migrations)
                 .build(),
         )
+        .plugin(tauri_plugin_log::Builder::new().targets([
+            Target::new(TargetKind::Stdout),
+            Target::new(TargetKind::LogDir { file_name: Some("log.txt".to_string()) }),
+            Target::new(TargetKind::Webview),
+        ]).build())
         .plugin(tauri_plugin_clipboard::init())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![greet])

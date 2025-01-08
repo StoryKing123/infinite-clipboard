@@ -29,6 +29,9 @@ import { authStore, clipboardStore, settingStore } from "./store";
 import Database from "@tauri-apps/plugin-sql";
 import { Button, Card, CardBody, Tab, Tabs, Image } from "@nextui-org/react";
 import Setting from "./components/setting";
+import ClipboardList from "./components/clipboardList";
+import { toast } from "react-toastify";
+import { info } from "@tauri-apps/plugin-log";
 
 function App() {
   const [greetMsg, setGreetMsg] = useState("");
@@ -58,17 +61,17 @@ function App() {
     )) as ClipboardEntry[];
     setClipboard(res);
 
-    console.log(res);
-    const response = await fetch(
-      "https://8080-idx-rust-1735789132880.cluster-mwrgkbggpvbq6tvtviraw2knqg.cloudworkstations.dev/connect"
-    );
-    const reader = response.body!.getReader();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const text = new TextDecoder().decode(value);
-      console.log("Received:", text);
-    }
+    // console.log(res);
+    // const response = await fetch(
+    //   "https://8080-idx-rust-1735789132880.cluster-mwrgkbggpvbq6tvtviraw2knqg.cloudworkstations.dev/connect"
+    // );
+    // const reader = response.body!.getReader();
+    // while (true) {
+    //   const { done, value } = await reader.read();
+    //   if (done) break;
+    //   const text = new TextDecoder().decode(value);
+    //   console.log("Received:", text);
+    // }
   };
 
   useEffect(() => {
@@ -118,7 +121,6 @@ function App() {
         "INSERT INTO clipboard (content, created_at) VALUES (?, ?)",
         [newText, new Date().toISOString()]
       );
-      // console.log(res);
       if (res && res.lastInsertId) {
         setClipboard((prev) => [
           {
@@ -138,9 +140,82 @@ function App() {
       console.log("plugin:clipboard://clipboard-monitor/update event received");
     });
   };
+  const initConnection = async () => {
+    class EventSourceWithHeaders extends EventSource {
+      constructor(url: string, headers: Record<string, string>) {
+        const modifiedUrl = new URL(url);
+        // 将headers添加为URL参数
+        Object.entries(headers).forEach(([key, value]) => {
+          modifiedUrl.searchParams.append(`header_${key}`, value);
+        });
+        super(modifiedUrl.toString());
+      }
+    }
+
+    // let events = new EventSourceWithHeaders(
+    //   "http://localhost:3000/events/connect?room_id=room1&client_id=client1",
+    //   {
+    //     "Authorization": `Bearer 321321`,
+    //   }
+    // );
+    console.log("init connection");
+    let response;
+    let reader;
+
+    try {
+      response = await fetch(
+        "http://localhost:3000/events/connect?room_id=room1&client_id=client1",
+        { headers: { Authorization: `Bearer 321321` } }
+      );
+      reader = response!.body!.getReader();
+    } catch (error  ) {
+      console.log(error);
+      info((error as Error).message);
+      toast("连接失败");
+    }
+
+    while (true) {
+      const { done, value } = await reader!.read();
+      console.log(done, value);
+      if (done) break;
+      const text = new TextDecoder().decode(value);
+      console.log("Received:", text);
+    }
+    // events.onmessage = async (event) => {
+
+    //   const data = event.data;
+
+    //   const res = await db.current?.execute(
+    //     "INSERT INTO clipboard (content, created_at) VALUES (?, ?)",
+    //     [data, new Date().toISOString()]
+    //   );
+    //   if (res && res.lastInsertId) {
+    //     setClipboard((prev) => [
+    //       {
+    //         id: res.lastInsertId!,
+    //         content: data,
+    //         created_at: new Date().toISOString(),
+    //       },
+    //       ...prev,
+    //     ]);
+    //   }
+
+    // };
+    // const response = await fetch(
+    //   "https://8080-idx-rust-1735789132880.cluster-mwrgkbggpvbq6tvtviraw2knqg.cloudworkstations.dev/connect"
+    // );
+    // const reader = response.body!.getReader();
+    // while (true) {
+    //   const { done, value } = await reader.read();
+    //   if (done) break;
+    //   const text = new TextDecoder().decode(value);
+    //   console.log("Received:", text);
+    // }
+  };
   useEffect(() => {
     listenClipboard();
     initDB();
+    initConnection();
     // console.log("effect");
     // http
 
@@ -178,14 +253,19 @@ function App() {
         <div>
           <Image src={logo} alt="logo" width={32} height={32} />
         </div>
-        <Button
-          className="ml-auto mr-2"
-          color="primary"
-          href="#"
-          variant="flat"
-        >
-          登录
-        </Button>
+        {auth?.token ? (
+          <div>{auth.email}</div>
+        ) : (
+          <Button
+            className="ml-auto mr-2"
+            color="primary"
+            href="#"
+            variant="flat"
+            onPress={handleGithubLogin}
+          >
+            登录
+          </Button>
+        )}
       </div>
       <div className="flex-1 h-auto flex overflow-hidden">
         <div
@@ -261,27 +341,7 @@ function App() {
           </div>
         </div>
         <div className="h-full  flex-1 overflow-hidden ">
-          {tabKey === "clipboard" && (
-            <div className="h-full flex flex-col">
-              <div className="flex ">
-                <Button
-                  onPress={handleClearHistory}
-                  color="danger"
-                  size="sm"
-                  className="ml-auto mr-0"
-                >
-                  清除全部
-                </Button>
-              </div>
-              <div className="flex-1 overflow-y-scroll mt-2">
-                {clipboard.map((item) => (
-                  <div key={item.id} className="p-2 border-b">
-                    {item.content}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {tabKey === "clipboard" && <ClipboardList db={db.current} />}
           {tabKey === "setting" && <Setting />}
         </div>
       </div>
