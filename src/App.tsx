@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import reactLogo from "./assets/react.svg";
 import { invoke } from "@tauri-apps/api/core";
 import {
@@ -45,6 +45,7 @@ function App() {
   const [clipboard, setClipboard] = useAtom(clipboardStore);
   const clipboardRef = useRef<ClipboardEntry[]>([]);
   const [tabKey, setTabKey] = useState<string>("clipboard");
+  const clinetid = useId();
 
   const initDB = async () => {
     const dbInstance = await Database.load("sqlite:app.db");
@@ -164,7 +165,7 @@ function App() {
 
     try {
       response = await fetch(
-        "http://localhost:3000/events/connect?room_id=room1&client_id=client1",
+        `http://localhost:3000/events/connect?room_id=room1&client_id=${clinetid}`,
         { headers: { Authorization: `Bearer 321321` } }
       );
       reader = response!.body!.getReader();
