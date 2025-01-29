@@ -1,4 +1,4 @@
-import { Button } from "@nextui-org/react";
+import { Button } from "@heroui/react";
 import { useAtom } from "jotai";
 import { clipboardStore } from "../../store";
 import Database from "@tauri-apps/plugin-sql";

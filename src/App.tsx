@@ -1,6 +1,8 @@
-import { useEffect, useId, useRef, useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
+import { useEffect, useId, useRef, useState } from 'react';
+import reactLogo from './assets/react.svg';
+import { Window } from '@tauri-apps/api/window';
+import { Webview } from '@tauri-apps/api/webview';
+import { invoke } from '@tauri-apps/api/core';
 import {
   onClipboardUpdate,
   onImageUpdate,
@@ -16,26 +18,33 @@ import {
   hasText,
   hasRTF,
   hasFiles,
-} from "tauri-plugin-clipboard-api";
-import logo from "./assets/icon.png";
-import { fetch } from "@tauri-apps/plugin-http";
+} from 'tauri-plugin-clipboard-api';
+import logo from './assets/icon.png';
+import { fetch } from '@tauri-apps/plugin-http';
 
-import { UnlistenFn } from "@tauri-apps/api/event";
-import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { listen } from "@tauri-apps/api/event";
+import { UnlistenFn } from '@tauri-apps/api/event';
+import { listen } from '@tauri-apps/api/event';
 
-import { useAtom } from "jotai";
-import { authStore, clipboardStore, settingStore } from "./store";
-import Database from "@tauri-apps/plugin-sql";
-import { Button, Card, CardBody, Tab, Tabs, Image } from "@nextui-org/react";
-import Setting from "./components/setting";
-import ClipboardList from "./components/clipboardList";
-import { toast } from "react-toastify";
-import { info } from "@tauri-apps/plugin-log";
+import { useAtom } from 'jotai';
+import { authStore, clipboardStore, settingStore } from './store';
+import Database from '@tauri-apps/plugin-sql';
+import { Button, Card, CardBody, Tab, Tabs, Image } from '@heroui/react';
+import Setting from './components/setting';
+import ClipboardList from './components/clipboardList';
+import { toast } from 'react-toastify';
+import { info } from '@tauri-apps/plugin-log';
+import { useTheme } from './hooks';
+import { About } from './components/about';
+import {
+  isRegistered,
+  register,
+  unregister,
+} from '@tauri-apps/plugin-global-shortcut';
+import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  const [greetMsg, setGreetMsg] = useState('');
+  const [name, setName] = useState('');
   const unlistenClipboard = useRef<() => Promise<void>>(undefined);
   const unlistenTextUpdate = useRef<UnlistenFn>(undefined);
   const [auth, setAuth] = useAtom(authStore);
@@ -44,11 +53,15 @@ function App() {
   // const [clipboard, setClipboard] = useState<ClipboardEntry[]>([]);
   const [clipboard, setClipboard] = useAtom(clipboardStore);
   const clipboardRef = useRef<ClipboardEntry[]>([]);
-  const [tabKey, setTabKey] = useState<string>("clipboard");
+  const [tabKey, setTabKey] = useState<string>('clipboard');
   const clinetid = useId();
+  useTheme();
 
+  useEffect(() => {
+    clipboardRef.current = clipboard;
+  }, [clipboard]);
   const initDB = async () => {
-    const dbInstance = await Database.load("sqlite:app.db");
+    const dbInstance = await Database.load('sqlite:app.db');
     db.current = dbInstance;
     await dbInstance.execute(`
       CREATE TABLE IF NOT EXISTS clipboard (
@@ -58,7 +71,7 @@ function App() {
       )
       `);
     const res = (await dbInstance.select(
-      "SELECT * FROM clipboard"
+      'SELECT * FROM clipboard'
     )) as ClipboardEntry[];
     setClipboard(res);
 
@@ -75,37 +88,23 @@ function App() {
     // }
   };
 
-  useEffect(() => {
-    if (setting.theme === "dark") {
-      document.body.classList.remove("light");
-      document.body.classList.add("dark");
-    } else {
-      document.body.classList.remove("dark");
-      document.body.classList.add("light");
-    }
-  }, [setting.theme]);
-
-  useEffect(() => {
-    clipboardRef.current = clipboard;
-  }, [clipboard]);
-
   const handleGithubLogin = async () => {
-    console.log("handleGithubLogin");
-    const webview = new WebviewWindow("github-oauth", {
-      url: "https://github.com/login/oauth/authorize?scope=user:email&client_id=Ov23lix14xI8yCaYz8cP",
-      title: "GitHub Login",
+    console.log('handleGithubLogin');
+    const webview = new WebviewWindow('github-oauth', {
+      url: 'https://github.com/login/oauth/authorize?scope=user:email&client_id=Ov23lix14xI8yCaYz8cP',
+      title: 'GitHub Login',
       width: 800,
       height: 600,
       center: true,
     });
   };
   const handleClearHistory = async () => {
-    await db.current?.execute("DELETE FROM clipboard");
+    await db.current?.execute('DELETE FROM clipboard');
     setClipboard([]);
   };
 
   const listenClipboard = async () => {
-    unlistenTextUpdate.current = await onTextUpdate(async (newText) => {
+    unlistenTextUpdate.current = await onTextUpdate(async newText => {
       console.log(newText);
 
       // console.log(clipboard)
@@ -119,11 +118,11 @@ function App() {
         return;
       }
       const res = await db.current?.execute(
-        "INSERT INTO clipboard (content, created_at) VALUES (?, ?)",
+        'INSERT INTO clipboard (content, created_at) VALUES (?, ?)',
         [newText, new Date().toISOString()]
       );
       if (res && res.lastInsertId) {
-        setClipboard((prev) => [
+        setClipboard(prev => [
           {
             id: res.lastInsertId!,
             content: newText,
@@ -138,7 +137,7 @@ function App() {
 
     unlistenClipboard.current = await startListening();
     onClipboardUpdate(async () => {
-      console.log("plugin:clipboard://clipboard-monitor/update event received");
+      console.log('plugin:clipboard://clipboard-monitor/update event received');
     });
   };
   const initConnection = async () => {
@@ -153,55 +152,56 @@ function App() {
       }
     }
 
-    // let events = new EventSourceWithHeaders(
-    //   "http://localhost:3000/events/connect?room_id=room1&client_id=client1",
-    //   {
-    //     "Authorization": `Bearer 321321`,
-    //   }
-    // );
-    console.log("init connection");
-    let response;
-    let reader;
+    let events = new EventSourceWithHeaders(
+      'http://localhost:3000/events/connect?room_id=room1&client_id=client1',
+      {
+        Authorization: `Bearer 321321`,
+      }
+    );
+    console.log('init connection');
+    // let response;
+    // let reader;
 
-    try {
-      response = await fetch(
-        `http://localhost:3000/events/connect?room_id=room1&client_id=${clinetid}`,
-        { headers: { Authorization: `Bearer 321321` } }
-      );
-      reader = response!.body!.getReader();
-    } catch (error  ) {
-      console.log(error);
-      info((error as Error).message);
-      toast("连接失败");
-    }
-
-    while (true) {
-      const { done, value } = await reader!.read();
-      console.log(done, value);
-      if (done) break;
-      const text = new TextDecoder().decode(value);
-      console.log("Received:", text);
-    }
-    // events.onmessage = async (event) => {
-
-    //   const data = event.data;
-
-    //   const res = await db.current?.execute(
-    //     "INSERT INTO clipboard (content, created_at) VALUES (?, ?)",
-    //     [data, new Date().toISOString()]
+    // try {
+    //   response = await fetch(
+    //     `http://localhost:3000/events/connect?room_id=room1&client_id=111`
+    //     // { headers: { Authorization: `Bearer 321321` } }
     //   );
-    //   if (res && res.lastInsertId) {
-    //     setClipboard((prev) => [
-    //       {
-    //         id: res.lastInsertId!,
-    //         content: data,
-    //         created_at: new Date().toISOString(),
-    //       },
-    //       ...prev,
-    //     ]);
-    //   }
+    //   console.log('连接成功')
+    //   reader = response!.body!.getReader();
+    // } catch (error  ) {
+    //   console.log(error);
+    //   info((error as Error).message);
+    //   toast("连接失败");
+    // }
 
-    // };
+    // while (true) {
+    //   const { done, value } = await reader!.read();
+    //   console.log(done, value);
+    //   if (done) break;
+    //   const text = new TextDecoder().decode(value);
+    //   console.log("Received:", text);
+    // }
+
+    events.onmessage = async event => {
+      // console.log(event)
+      const data = event.data;
+
+      const res = await db.current?.execute(
+        'INSERT INTO clipboard (content, created_at) VALUES (?, ?)',
+        [data, new Date().toISOString()]
+      );
+      if (res && res.lastInsertId) {
+        setClipboard(prev => [
+          {
+            id: res.lastInsertId!,
+            content: data,
+            created_at: new Date().toISOString(),
+          },
+          ...prev,
+        ]);
+      }
+    };
     // const response = await fetch(
     //   "https://8080-idx-rust-1735789132880.cluster-mwrgkbggpvbq6tvtviraw2knqg.cloudworkstations.dev/connect"
     // );
@@ -213,10 +213,39 @@ function App() {
     //   console.log("Received:", text);
     // }
   };
+  const initShortcut = async () => {
+    const key = 'Command+Shift+L';
+    await unregister(key);
+
+    const res = await isRegistered(key);
+
+    if (!res) {
+      await register(key, async event => {
+        console.log(event);
+        if (event.state === 'Pressed') {
+          invoke('show_panel');
+          // const webview = await WebviewWindow.getByLabel('mini-clipboard');
+          // if (webview) {
+            // await webview.show();
+            // await webview.setFocus();
+            // console.log(await webview.isFocused())
+            // setTimeout(async () => {
+            //   await webview.setFocus();
+            // }, 50);
+            // console.log('Shortcut triggered');
+          // }
+        }
+      });
+    }
+
+    // const isRegistered = await isGlobalShortcutRegistered("ctrl+c");
+    // console.log(isRegistered);
+  };
   useEffect(() => {
     listenClipboard();
     initDB();
     initConnection();
+    initShortcut();
     // console.log("effect");
     // http
 
@@ -227,7 +256,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const unlisten = listen("oauth-callback", (event) => {
+    const unlisten = listen('oauth-callback', event => {
       const payload = event.payload as OAuthCallbackPayload;
       setAuth({
         token: payload.token,
@@ -237,18 +266,18 @@ function App() {
     });
 
     return () => {
-      unlisten.then((f) => f()); // 清理监听器
+      unlisten.then(f => f()); // 清理监听器
     };
   }, []);
 
   async function greet() {
     // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
+    setGreetMsg(await invoke('greet', { name }));
   }
 
   return (
     <main
-      className={`${setting.theme} dark:bg-black light:bg-white dark:text-white light:text-black h-screen w-screen flex flex-col  text-black`}
+      className={`${setting.theme} dark:bg-black light:bg-white dark:text-white light:text-black h-screen w-screen flex flex-col  light:text-black`}
     >
       <div className="flex items-center">
         <div>
@@ -280,7 +309,7 @@ function App() {
             <div className="flex flex-col gap-2 w-full">
               <Tabs
                 aria-label="Options"
-                onSelectionChange={(e) => {
+                onSelectionChange={e => {
                   setTabKey(e as string);
                 }}
                 className="mx-2"
@@ -342,8 +371,9 @@ function App() {
           </div>
         </div>
         <div className="h-full  flex-1 overflow-hidden ">
-          {tabKey === "clipboard" && <ClipboardList db={db.current} />}
-          {tabKey === "setting" && <Setting />}
+          {tabKey === 'clipboard' && <ClipboardList db={db.current} />}
+          {tabKey === 'setting' && <Setting />}
+          {tabKey === 'about' && <About />}
         </div>
       </div>
     </main>

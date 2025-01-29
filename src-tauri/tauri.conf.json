@@ -14,13 +14,16 @@
       {
         "title": "infinite-clipboard",
         "width": 800,
-        "height": 600
+        "height": 600,
+        "focus": false,
+        "visible": true,
+        "transparent": true
       }
-    
     ],
     "security": {
       "csp": null
-    }
+    },
+    "macOSPrivateApi": true
   },
   "bundle": {
     "active": true,
