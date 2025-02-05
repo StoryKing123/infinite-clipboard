@@ -20,7 +20,19 @@ declare type ClipboardEntry = {
 };
 
 declare type SettingAtom = {
+  id:string;
   theme: Theme;
+  language: string;
 };
+
+
+
+declare type ConnectionAtom = {
+  id?: string;
+  room?: string;
+  devices?: {clientID:string}[]
+  status?: number
+}
+
 
 declare type Theme = "light" | "dark";

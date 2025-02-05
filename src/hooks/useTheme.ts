@@ -6,7 +6,11 @@ import { settingStore } from "../store";
 export const useTheme = () => {
     const [setting] = useAtom(settingStore);
 
+    
     useEffect(() => {
+        console.log('theme change')
+        console.log(setting.theme)
+        // debugger
         if (setting.theme === "dark") {
             document.documentElement.classList.remove("light");
             document.documentElement.classList.add("dark");

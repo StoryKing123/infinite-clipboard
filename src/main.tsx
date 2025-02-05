@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./App.css";
+import './i18n'
 import {HeroUIProvider} from "@heroui/react";
 import { ToastContainer, toast } from "react-toastify";
 import { BrowserRouter, Route, Routes } from "react-router";

@@ -2,7 +2,7 @@ mod commands;
 
 use serde_json::{json, to_string};
 use tauri::{
-    http::{self, Response}, AppHandle, Emitter, Manager, Url, WebviewUrl, WebviewWindowBuilder,WebviewWindow
+    http::{self, Response}, menu::{Menu, MenuItem}, tray::TrayIconBuilder, App, AppHandle, Emitter, Manager, Url, WebviewUrl, WebviewWindow, WebviewWindowBuilder
 };
 
 use tauri_plugin_log::{Target, TargetKind};
@@ -63,6 +63,11 @@ fn init(app_handle: &AppHandle) {
   
     panel.set_delegate(delegate);
   }
+
+  #[tauri::command]
+  fn exit_app(handle:AppHandle){
+    handle.exit(1);
+  }
   
   #[tauri::command]
   fn show_panel(handle: AppHandle) {
@@ -90,6 +95,7 @@ fn init(app_handle: &AppHandle) {
 
 
 
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let migrations = vec![
@@ -106,6 +112,8 @@ pub fn run() {
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_http::init())
         .setup(|app| {
+
+
             let mini_window = tauri::WebviewWindowBuilder::new(
                 app,
                 "mini-clipboard", // 窗口标签
@@ -194,7 +202,7 @@ pub fn run() {
         .plugin(tauri_nspanel::init())
         .plugin(tauri_plugin_clipboard::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, commands::send::sendText,show_panel,hide_panel,close_panel])
+        .invoke_handler(tauri::generate_handler![greet, commands::send::sendText,show_panel,hide_panel,close_panel,exit_app])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -1,29 +1,20 @@
 import { KeyboardEventHandler, useEffect, useRef, useState } from 'react';
 import { Listbox, ListboxSection, ListboxItem } from '@heroui/listbox';
 import { Input } from '@heroui/react';
-import { clipboardStore } from '../store';
+import { clipboardStore, settingStore } from '../store';
 import { useAtom } from 'jotai';
-import { register } from '@tauri-apps/plugin-global-shortcut';
-import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
-import { writeText } from 'tauri-plugin-clipboard-api';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { UnlistenFn } from '@tauri-apps/api/event';
+import { useTheme } from '../hooks';
 
 const Clipboard = () => {
   const focusedUnlisten = useRef<UnlistenFn | undefined>(undefined);
   const [clipboard, setClipboard] = useAtom(clipboardStore);
   const [searchText, setSearchText] = useState('');
+   const [setting] = useAtom(settingStore);
   const handleKeyDown: KeyboardEventHandler<HTMLUListElement> = e => {
-    // console.log(e.key);
-    // if (e.key === 'Enter') {
-    //   e.preventDefault();
-    //   const focusedItem = document.querySelector('[aria-selected="true"]');
-    //   if (focusedItem) {
-    //     const content = focusedItem.textContent;
-    //     console.log('选中内容:', content);
-    //   }
-    // }
+   
   };
   const initFocusEvent = async () => {
     const currentWindow = await getCurrentWindow();
@@ -48,7 +39,7 @@ const Clipboard = () => {
     };
   };
   const dragEvent = (e: MouseEvent) => {
-    debugger
+    // debugger
     if (e.buttons === 1) {
       // Primary (left) button
       e.detail === 2
@@ -56,6 +47,19 @@ const Clipboard = () => {
         : getCurrentWindow().startDragging(); // Else start dragging
     }
   }
+  console.log(setting)
+
+  useTheme();
+
+//   useEffect(() => {
+//     if (setting.theme === "dark") {
+//         document.documentElement.classList.remove("light");
+//         document.documentElement.classList.add("dark");
+//     } else {
+//         document.documentElement.classList.remove("dark");
+//         document.documentElement.classList.add("light");
+//     }
+// }, [setting.theme]);
 
   useEffect(() => {
     console.log('init');
@@ -114,7 +118,7 @@ const Clipboard = () => {
   return (
     <div
       id="clipboard-panel"
-      className=" bg-white  overflow-hidden flex flex-col  h-screen rounded-md"
+      className={`${setting.theme} dark:bg-black dark:text-white light:bg-white  light:text-black  overflow-hidden flex flex-col  h-screen rounded-md`}
     >
       <Input
         onKeyDown={handleSearchKeyDown}
@@ -126,7 +130,7 @@ const Clipboard = () => {
         onKeyDown={handleKeyDown}
         className="flex-1 overflow-y-auto"
         aria-label="Actions"
-        onAction={key => alert(key)}
+        // onAction={key => alert(key)}
       >
         {filteredClipboard.map((item, index) => (
           <ListboxItem
@@ -141,7 +145,6 @@ const Clipboard = () => {
               );
 
               invoke('hide_panel');
-              // await currentWindow?.hide();
               invoke('sendText', {
                 name: clipboard[
                   e.target.getAttribute('data-index') as unknown as number
