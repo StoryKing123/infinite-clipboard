@@ -1,12 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { useAtom } from 'jotai';
-import { clipboardStore } from '../store';
+import { clipboardStore, insertClipboard } from '../store';
 import Database from '@tauri-apps/plugin-sql';
 import { ClipboardEntry } from '../types';
 import {
     onTextUpdate,
     startListening,
     onClipboardUpdate,
+    onImageUpdate,
 } from 'tauri-plugin-clipboard-api';
 import { UnlistenFn } from '@tauri-apps/api/event';
 
@@ -15,13 +16,15 @@ export const useClipboard = () => {
     const clipboardRef = useRef<ClipboardEntry[]>([]);
     const unlistenClipboard = useRef<() => Promise<void>>(undefined);
     const unlistenTextUpdate = useRef<UnlistenFn>(undefined);
+    const unlistenImageUpdate = useRef<UnlistenFn>(undefined);
     const db = useRef<Database>(undefined);
+    const [, insert] = useAtom(insertClipboard);
 
     const initDBInstance = async () => {
         const dbInstance = await Database.load('sqlite:app.db');
         db.current = dbInstance;
     };
-    
+
     useEffect(() => {
         clipboardRef.current = clipboard;
     }, [clipboard]);
@@ -32,9 +35,11 @@ export const useClipboard = () => {
         await db.current!.execute(`
       CREATE TABLE IF NOT EXISTS clipboard (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
+          type INTEGER,
           content TEXT,
           created_at DATETIME
-      )
+      );
+    --   ALTER TABLE clipboard ADD COLUMN type INTEGER DEFAULT 1;
     `);
 
         const res = (await db.current!.select('SELECT * FROM clipboard order by created_at desc')) as ClipboardEntry[];
@@ -45,6 +50,7 @@ export const useClipboard = () => {
 
         console.log('register event')
         unlistenTextUpdate.current = await onTextUpdate(async newText => {
+            console.log('text copy')
             if (
                 clipboardRef.current.length > 1 &&
                 clipboardRef.current[0].content === newText
@@ -52,22 +58,40 @@ export const useClipboard = () => {
                 return;
             }
 
-            const res = await db.current?.execute(
-                'INSERT INTO clipboard (content, created_at) VALUES (?, ?)',
-                [newText, new Date().toISOString()]
-            );
+            insert([{
+                // id:'123',
+                content: newText,
+                type: 0,
+                created_at: new Date().toISOString(),
+            }])
 
-            if (res && res.lastInsertId) {
-                setClipboard(prev => [
-                    {
-                        id: res.lastInsertId!,
-                        content: newText,
-                        created_at: new Date().toISOString(),
-                    },
-                    ...prev,
-                ]);
-            }
+            // const res = await db.current?.execute(
+            //     'INSERT INTO clipboard (content, created_at,type) VALUES (?, ?,0)',
+            //     [newText, new Date().toISOString()]
+            // );
+
+            // if (res && res.lastInsertId) {
+            //     setClipboard(prev => [
+            //         {
+            //             id: `${res.lastInsertId!}`,
+            //             content: newText,
+            //             type: 0,
+            //             created_at: new Date().toISOString(),
+            //         },
+            //         ...prev,
+            //     ]);
+            // }
         });
+
+        unlistenImageUpdate.current = await onImageUpdate(async newImage => {
+            console.log('image copy')
+            console.log(newImage)
+
+            const res = await db.current?.execute(
+                'INSERT INTO clipboard (content, created_at) VALUES (?, ?, 1)',
+                [newImage, new Date().toISOString()]
+            );
+        })
 
         unlistenClipboard.current = await startListening();
         onClipboardUpdate(() => {
@@ -90,23 +114,31 @@ export const useClipboard = () => {
         ) {
             return;
         }
+        // insert([{
+        //     id: '123',
+        //     content: newText,
+        //     type: 0,
+        //     created_at: new Date().toISOString(),
+        // }]);
+        // insert
 
-        const res = await db.current?.execute(
-            'INSERT INTO clipboard (content, created_at) VALUES (?, ?)',
-            [newText, new Date().toISOString()]
-        );
+        // const res = await db.current?.execute(
+        //     'INSERT INTO clipboard (content, created_at) VALUES (?, ?,0)',
+        //     [newText, new Date().toISOString()]
+        // );
 
 
-        if (res && res.lastInsertId) {
-            setClipboard(prev => [
-                {
-                    id: res.lastInsertId!,
-                    content: newText,
-                    created_at: new Date().toISOString(),
-                },
-                ...prev,
-            ]);
-        }
+        // if (res && res.lastInsertId) {
+        //     setClipboard(prev => [
+        //         {
+        //             id: `${res.lastInsertId!}`,
+        //             content: newText,
+        //             type: 0,
+        //             created_at: new Date().toISOString(),
+        //         },
+        //         ...prev,
+        //     ]);
+        // }
     }
     useEffect(() => {
         initDBInstance();
@@ -122,6 +154,7 @@ export const useClipboard = () => {
         return () => {
             unlistenClipboard.current?.();
             unlistenTextUpdate.current?.();
+            unlistenImageUpdate.current?.();
         };
     }, [db.current]);
 

@@ -1,5 +1,6 @@
 export interface ClipboardEntry {
-  id: number;
+  id: string;
+  type:number;
   content: string;
   created_at: string;
 }

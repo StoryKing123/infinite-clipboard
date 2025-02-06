@@ -1,7 +1,7 @@
 import { Button, Listbox, ListboxItem } from '@heroui/react';
 import type { Selection } from '@heroui/react';
 import { useAtom } from 'jotai';
-import { clipboardStore } from '../../store';
+import { baseClipboardAtom, clipboardStore } from '../../store';
 import Database from '@tauri-apps/plugin-sql';
 import { useMemo, useState } from 'react';
 
@@ -19,7 +19,7 @@ const ClipboardList = ({ db }: ClipboardListProps) => {
   );
 
   const handleClearAllHistory = async () => {
-    await db?.execute('DELETE FROM clipboard');
+    // await db?.execute('DELETE FROM clipboard');
     setClipboard([]);
   };
 

@@ -14,7 +14,8 @@ declare type AuthAtom = {
 // }
 
 declare type ClipboardEntry = {
-  id: number;
+  id: string;
+  type:number;
   content: string;
   created_at: string;
 };
