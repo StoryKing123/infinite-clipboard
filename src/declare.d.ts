@@ -24,6 +24,9 @@ declare type SettingAtom = {
   id:string;
   theme: Theme;
   language: string;
+  shortcut:{
+    showOrHideClipboard?:string
+  }
 };
 
 

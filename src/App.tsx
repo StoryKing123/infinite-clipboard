@@ -27,6 +27,7 @@ import { toast } from 'react-toastify';
 import { nanoid } from 'nanoid';
 import UserSVG from './assets/user.svg';
 import Device from './components/device';
+import Shortcut from './components/shortcut';
 
 function App() {
   const [auth, setAuth] = useAtom(authStore);
@@ -270,7 +271,10 @@ function App() {
         </div>
         <div className="ml-auto mr-2">
           {auth?.token ? (
-            <Chip variant='flat' avatar={<Image src={UserSVG} width={32} height={32}></Image>}>
+            <Chip
+              variant="flat"
+              avatar={<Image src={UserSVG} width={32} height={32}></Image>}
+            >
               <div className="flex flex-2 items-center">
                 {/* */}
                 {/* <UserSVG /> */}
@@ -306,10 +310,11 @@ function App() {
               <Tab key="clipboard" className="w-[100px]" title="剪切板" />
               <Tab key="setting" title="设置" />
               <Tab key="device" title="设备" />
+              <Tab key="shortcut" title="快捷键" />
               <Tab key="about" title="关于" />
             </Tabs>
             <div className="mt-2 cursor-pointer">
-              <Chip variant='flat'>
+              <Chip variant="flat">
                 <div className="flex gap-2 items-center">
                   <div
                     className={`${
@@ -331,6 +336,7 @@ function App() {
         <div className="h-full flex-1 overflow-hidden">
           {tabKey === 'clipboard' && <ClipboardList db={db.current} />}
           {tabKey === 'setting' && <Setting />}
+          {tabKey === 'shortcut' && <Shortcut />}
           {tabKey === 'about' && <About />}
           {tabKey === 'device' && <Device />}
         </div>

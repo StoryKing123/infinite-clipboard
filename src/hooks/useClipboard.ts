@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useAtom } from 'jotai';
-import { clipboardStore, insertClipboard } from '../store';
+import { clipboardStore, insertClipboard, isProgrammaticClipboardStore } from '../store';
 import Database from '@tauri-apps/plugin-sql';
 import { ClipboardEntry } from '../types';
 import {
@@ -10,6 +10,7 @@ import {
     onImageUpdate,
 } from 'tauri-plugin-clipboard-api';
 import { UnlistenFn } from '@tauri-apps/api/event';
+import { getBase64ImageSize } from '../utils/image';
 
 export const useClipboard = () => {
     const [clipboard, setClipboard] = useAtom(clipboardStore);
@@ -18,6 +19,7 @@ export const useClipboard = () => {
     const unlistenTextUpdate = useRef<UnlistenFn>(undefined);
     const unlistenImageUpdate = useRef<UnlistenFn>(undefined);
     const db = useRef<Database>(undefined);
+    const [isProgrammaticClipboard] = useAtom(isProgrammaticClipboardStore);
     const [, insert] = useAtom(insertClipboard);
 
     const initDBInstance = async () => {
@@ -50,6 +52,8 @@ export const useClipboard = () => {
 
         console.log('register event')
         unlistenTextUpdate.current = await onTextUpdate(async newText => {
+            if (isProgrammaticClipboard) return
+
             console.log('text copy')
             if (
                 clipboardRef.current.length > 1 &&
@@ -59,7 +63,6 @@ export const useClipboard = () => {
             }
 
             insert([{
-                // id:'123',
                 content: newText,
                 type: 0,
                 created_at: new Date().toISOString(),
@@ -84,13 +87,25 @@ export const useClipboard = () => {
         });
 
         unlistenImageUpdate.current = await onImageUpdate(async newImage => {
+            if (isProgrammaticClipboard) return
             console.log('image copy')
-            console.log(newImage)
+            // console.log(newImage)
 
-            const res = await db.current?.execute(
-                'INSERT INTO clipboard (content, created_at) VALUES (?, ?, 1)',
-                [newImage, new Date().toISOString()]
-            );
+            // for (let i = 0; i < clipboard.length && i < 10; i++) {
+            // }
+
+            const sizes = getBase64ImageSize(newImage)
+            console.log(sizes)
+
+            if (sizes.mb > 1) {
+                console.log('image too large')
+                return
+            }
+            insert([{ content: newImage, created_at: new Date().toISOString(), type: 1 }])
+            // const res = await db.current?.execute(
+            //     'INSERT INTO clipboard (content, created_at) VALUES (?, ?, 1)',
+            //     [newImage, new Date().toISOString()]
+            // );
         })
 
         unlistenClipboard.current = await startListening();
@@ -144,19 +159,27 @@ export const useClipboard = () => {
         initDBInstance();
     }, [])
 
+    // useEffect(() => {
+    //     if (db.current) {
+    //         listenClipboard();
+    //         initDB();
+    //     }
+
+
+    //     return () => {
+    //         unlistenClipboard.current?.();
+    //         unlistenTextUpdate.current?.();
+    //         unlistenImageUpdate.current?.();
+    //     };
+    // }, [db.current]);
     useEffect(() => {
-        if (db.current) {
-            listenClipboard();
-            initDB();
-        }
-
-
+        listenClipboard()
         return () => {
             unlistenClipboard.current?.();
             unlistenTextUpdate.current?.();
             unlistenImageUpdate.current?.();
-        };
-    }, [db.current]);
+        }
+    }, [])
 
     return {
         clipboard,

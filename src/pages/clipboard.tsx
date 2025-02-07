@@ -1,21 +1,27 @@
 import { KeyboardEventHandler, useEffect, useRef, useState } from 'react';
 import { Listbox, ListboxSection, ListboxItem } from '@heroui/listbox';
-import { Input } from '@heroui/react';
-import { clipboardStore, settingStore } from '../store';
+import { Input, Image } from '@heroui/react';
+import {
+  clipboardStore,
+  isProgrammaticClipboardStore,
+  settingStore,
+} from '../store';
 import { useAtom } from 'jotai';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { UnlistenFn } from '@tauri-apps/api/event';
 import { useTheme } from '../hooks';
+import { writeImageBase64, writeText } from 'tauri-plugin-clipboard-api';
 
 const Clipboard = () => {
   const focusedUnlisten = useRef<UnlistenFn | undefined>(undefined);
   const [clipboard, setClipboard] = useAtom(clipboardStore);
   const [searchText, setSearchText] = useState('');
-   const [setting] = useAtom(settingStore);
-  const handleKeyDown: KeyboardEventHandler<HTMLUListElement> = e => {
-   
-  };
+  const [setting] = useAtom(settingStore);
+  const [isProgrammaticClipboard, setIsProgrammaticClipboard] = useAtom(
+    isProgrammaticClipboardStore
+  );
+  const handleKeyDown: KeyboardEventHandler<HTMLUListElement> = e => {};
   const initFocusEvent = async () => {
     const currentWindow = await getCurrentWindow();
     const unlisten = await currentWindow.onFocusChanged(
@@ -46,20 +52,20 @@ const Clipboard = () => {
         ? getCurrentWindow().toggleMaximize() // Maximize on double click
         : getCurrentWindow().startDragging(); // Else start dragging
     }
-  }
-  console.log(setting)
+  };
+  console.log(setting);
 
   useTheme();
 
-//   useEffect(() => {
-//     if (setting.theme === "dark") {
-//         document.documentElement.classList.remove("light");
-//         document.documentElement.classList.add("dark");
-//     } else {
-//         document.documentElement.classList.remove("dark");
-//         document.documentElement.classList.add("light");
-//     }
-// }, [setting.theme]);
+  //   useEffect(() => {
+  //     if (setting.theme === "dark") {
+  //         document.documentElement.classList.remove("light");
+  //         document.documentElement.classList.add("dark");
+  //     } else {
+  //         document.documentElement.classList.remove("dark");
+  //         document.documentElement.classList.add("light");
+  //     }
+  // }, [setting.theme]);
 
   useEffect(() => {
     console.log('init');
@@ -73,7 +79,9 @@ const Clipboard = () => {
     // you need to call unlisten if your handler goes out of scope e.g. the component is unmounted
     //  unlisten();
 
-    document.getElementById('clipboard-panel')?.addEventListener('mousedown', dragEvent);
+    document
+      .getElementById('clipboard-panel')
+      ?.addEventListener('mousedown', dragEvent);
 
     document.documentElement.style.background = 'none';
 
@@ -82,7 +90,9 @@ const Clipboard = () => {
     return () => {
       focusedUnlisten.current?.();
       window.removeEventListener('keydown', handleKeyDown);
-      document.getElementById('clipboard-panel')?.removeEventListener('mousedown', dragEvent);
+      document
+        .getElementById('clipboard-panel')
+        ?.removeEventListener('mousedown', dragEvent);
     };
   }, []);
 
@@ -137,25 +147,48 @@ const Clipboard = () => {
             id={item.id.toString()}
             data-index={index}
             onPress={async e => {
-              console.log(e.target.getAttribute('data-index'));
-              console.log(
+              const item =
                 clipboard[
                   e.target.getAttribute('data-index') as unknown as number
-                ].content
-              );
+                ];
+              if (item) {
+                invoke('hide_panel');
+                if (item.type === 0) {
+                  await writeText(item.content);
+                } else if (item.type === 1) {
+                  await writeImageBase64(item.content);
+                }
 
-              invoke('hide_panel');
-              invoke('sendText', {
-                name: clipboard[
-                  e.target.getAttribute('data-index') as unknown as number
-                ].content,
-              });
+                try {
+                  setIsProgrammaticClipboard(true);
+                  await invoke('paste');
+                  setTimeout(() => {
+                    setIsProgrammaticClipboard(false);
+                  }, 500);
+                } catch (error) {
+                  setIsProgrammaticClipboard(false);
+                }
+              }
+
+              // invoke('sendText', {
+              //   name: clipboard[
+              //     e.target.getAttribute('data-index') as unknown as number
+              //   ].content,
+              // });
 
               // writeText(clipboard[e.target.getAttribute('data-index') as unknown as number].content)
             }}
             key={item.id}
           >
-            {item.content}
+            {item.type === 0 && item.content}
+            {item.type === 1 && (
+              <Image
+                width={100}
+                src={`data:image/png;base64,${item.content}`}
+              ></Image>
+            )}
+
+            {/* {item.content} */}
           </ListboxItem>
         ))}
       </Listbox>

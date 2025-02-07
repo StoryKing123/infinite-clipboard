@@ -202,7 +202,7 @@ pub fn run() {
         .plugin(tauri_nspanel::init())
         .plugin(tauri_plugin_clipboard::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, commands::send::sendText,show_panel,hide_panel,close_panel,exit_app])
+        .invoke_handler(tauri::generate_handler![greet, commands::send::sendText,show_panel,hide_panel,close_panel,exit_app, commands::send::paste])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -1,3 +1,4 @@
+import { emit, listen } from "@tauri-apps/api/event";
 import Database from "@tauri-apps/plugin-sql";
 import { atom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
@@ -37,8 +38,9 @@ export const insertClipboard = atom(null,
       values
     );
 
+    await emit('clipboard-db-changed', {});
     // 更新本地状态
-    set(baseClipboardAtom, prev => [...fullEntries,...prev ]);
+    // set(baseClipboardAtom, prev => [...fullEntries, ...prev]);
   })
 
 // 组合原子
@@ -51,14 +53,40 @@ export const clipboardStore = atom(
   }
 );
 
-// 初始化加载
-baseClipboardAtom.onMount = (setAtom) => {
-  console.log('clipboard data on mount')
-  Database.load('sqlite:app.db').then(db => {
-    db.select<ClipboardEntry[]>("SELECT * FROM clipboard ORDER BY created_at DESC")
-      .then(data => setAtom(data));
-  });
+// 监听数据库更新事件
+const setupClipboardSync = () => {
+  let unlisten: () => void;
+
+  const init = async (setAtom: (data: ClipboardEntry[]) => void) => {
+    console.log('listen event')
+    // debugger
+    // 初始化加载数据
+    const loadData = async () => {
+      const db = await Database.load('sqlite:app.db');
+      return db.select<ClipboardEntry[]>(
+        "SELECT * FROM clipboard ORDER BY created_at DESC"
+      );
+    };
+
+    // 首次加载
+    setAtom(await loadData());
+    console.log('listen event2')
+
+    // 监听更新事件
+    unlisten = await listen('clipboard-db-changed', async () => {
+      setAtom(await loadData());
+    });
+  };
+
+  return {
+    onMount: (setAtom: (data: ClipboardEntry[]) => void) => {
+      init(setAtom);
+      return () => unlisten?.();
+    }
+  };
 };
+// 初始化加载
+baseClipboardAtom.onMount = setupClipboardSync().onMount;
 
 // const storage: SyncStorage<ClipboardEntry[]> = {
 //   getItem: function (key: string, initialValue: ClipboardEntry[]): ClipboardEntry[] {
@@ -86,5 +114,9 @@ export const connectionStore = atom<ConnectionAtom>();
 export const settingStore = atomWithStorage<SettingAtom>("setting", {
   id: nanoid(10),
   theme: "light",
-  language: 'zh-cn'
+  language: 'zh-cn',
+  shortcut: { showOrHideClipboard: undefined }
 }, undefined, { getOnInit: true });
+
+
+export const isProgrammaticClipboardStore = atom(false)

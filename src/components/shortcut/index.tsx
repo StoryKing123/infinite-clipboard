@@ -1,0 +1,208 @@
+import { Button, Kbd, Listbox, ListboxItem } from '@heroui/react';
+import { useEffect, useRef, useState } from 'react';
+import hotkeys from 'hotkeys-js';
+import { useAtom } from 'jotai';
+import { settingStore } from '../../store';
+
+const Shortcut = () => {
+  const [isRecording, setIsRecording] = useState(false);
+  const isRecordingRef = useRef(isRecording);
+  const [setting, updateSetting] = useAtom(settingStore);
+  const [shortcut, setShortcut] = useState<string>();
+  const keysPressed = useRef(new Set<string>());
+  useEffect(() => {
+    if (setting?.shortcut?.showOrHideClipboard) {
+      setShortcut(setting.shortcut.showOrHideClipboard);
+      //   updateSetting({
+      //     ...setting,
+      //     shortcut: {
+      //       ...setting.shortcut,
+      //       showOrHideClipboard: 'ctrl+alt+shift+c',
+      //     },
+      //   });
+    }
+  }, [setting?.shortcut?.showOrHideClipboard]);
+
+  // 注册快捷键
+  const registerHotkey = (hotkey: string) => {
+    console.log('register key');
+    console.log(hotkey);
+    // hotkeys(hotkey, event => {
+    //   event.preventDefault();
+    //   // 这里执行你的功能，比如切换剪切板可见性
+    //   console.log('触发剪切板显示/隐藏');
+    // });
+  };
+
+  useEffect(() => {
+    if (shortcut) registerHotkey(shortcut);
+  }, [shortcut]);
+  const startRecord = () => {
+    setIsRecording(true);
+  };
+  const cancelRecord = () => {
+    setIsRecording(false);
+  };
+  useEffect(() => {
+    isRecordingRef.current = isRecording;
+  }, [isRecording]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isRecordingRef.current) return;
+
+      e.preventDefault();
+      const key = e.key.toLowerCase();
+
+      // 转换按键符号
+      let hotkeyKey: string;
+      switch (key) {
+        case 'meta':
+          hotkeyKey = 'command';
+          break;
+        case 'control':
+          hotkeyKey = 'ctrl';
+          break;
+        case 'shift':
+        case 'alt':
+          hotkeyKey = key;
+          break;
+        default:
+          if (e.key.length === 1) hotkeyKey = key;
+          else return;
+      }
+
+      // 添加按键到集合
+      keysPressed.current.add(hotkeyKey);
+      updateDisplay();
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (!isRecordingRef.current) return;
+
+      // 处理确认和取消
+      if (e.key === 'Enter') {
+        confirmShortcut();
+        return;
+      }
+      if (e.key === 'Escape') {
+        cancelRecord();
+        return;
+      }
+
+      // 移除释放的按键
+      const key = convertKey(e.key);
+      keysPressed.current.delete(key);
+
+      if (keysPressed.current.size === 0) {
+        cancelRecord();
+      }
+      //   console.log('pressed')
+      //   console.log(keysPressed.current)
+    };
+
+    const convertKey = (key: string) => {
+      switch (key.toLowerCase()) {
+        case 'meta':
+          return 'command';
+        case 'control':
+          return 'ctrl';
+        default:
+          return key.toLowerCase();
+      }
+    };
+
+    const updateDisplay = () => {
+      console.log('update');
+      console.log(keysPressed.current);
+      const keys = Array.from(keysPressed.current)
+        .sort((a, b) => a.localeCompare(b)) // 排序保证顺序一致
+        .join('+');
+      console.log(keys);
+      setShortcut(keys);
+    };
+
+    const confirmShortcut = () => {
+      console.log(keysPressed.current);
+      const newShortcut = Array.from(keysPressed.current)
+        .sort((a, b) => a.localeCompare(b))
+        .join('+');
+
+      // 需要至少一个普通键
+      if (
+        newShortcut
+          .split('+')
+          .some(k => !['command', 'ctrl', 'shift', 'alt'].includes(k))
+      ) {
+        // 解绑旧快捷键
+        hotkeys.unbind(shortcut);
+        // 注册新快捷键
+        setShortcut(newShortcut);
+        registerHotkey(newShortcut);
+        // localStorage.setItem('clipboardShortcut', newShortcut);
+      }
+
+      setIsRecording(false);
+      keysPressed.current.clear();
+    };
+
+    if (isRecording) {
+      window.addEventListener('keydown', handleKeyDown);
+      window.addEventListener('keyup', handleKeyUp);
+    }
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [isRecording]);
+  useEffect(() => {
+    const escapeEvent = (e: KeyboardEvent) => {
+      console.log(e);
+      if (e.code === 'Escape') {
+        // console.log(isRecording);
+        // console.log(isRecordingRef.current);
+        if (isRecordingRef.current === true) {
+          cancelRecord();
+        }
+      }
+    };
+    window.document.addEventListener('keydown', escapeEvent);
+    return () => {
+      window.document.removeEventListener('keydown', escapeEvent);
+    };
+  }, []);
+  return (
+    <div>
+      快捷键
+      <Listbox
+        classNames={{
+          //   base: 'max-w-xs',
+          list: 'max-h-[300px] overflow-scroll',
+        }}
+        selectionMode="multiple"
+        // topContent={topContent}
+        variant="flat"
+        // onSelectionChange={setValues}
+      >
+        <ListboxItem
+          showDivider
+          isReadOnly
+          startContent={<div>显示/隐藏剪切板</div>}
+          endContent={
+            <div>
+              <Kbd onClick={startRecord} keys={['command']}>
+                {isRecording && keysPressed.current.size === 0 && '录制中'}
+                {isRecording && keysPressed.current.size > 0 && shortcut}
+                {!isRecording && shortcut }
+                {!isRecording && !shortcut && '设置快捷键'}
+              </Kbd>
+            </div>
+          }
+        ></ListboxItem>
+      </Listbox>
+      {/* <Button>保存</Button> */}
+    </div>
+  );
+};
+export default Shortcut;
