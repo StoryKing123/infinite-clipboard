@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import hotkeys from 'hotkeys-js';
 import { useAtom } from 'jotai';
 import { settingStore } from '../../store';
+import { register, unregister } from '@tauri-apps/plugin-global-shortcut';
+import { invoke } from '@tauri-apps/api/core';
 
 const Shortcut = () => {
   const [isRecording, setIsRecording] = useState(false);
@@ -10,19 +12,33 @@ const Shortcut = () => {
   const [setting, updateSetting] = useAtom(settingStore);
   const [shortcut, setShortcut] = useState<string>();
   const keysPressed = useRef(new Set<string>());
+  const shortcutRef = useRef<string>(undefined);
+  const previousShortcut = useRef<SettingAtom['shortcut']>(undefined);
   useEffect(() => {
     if (setting?.shortcut?.showOrHideClipboard) {
       setShortcut(setting.shortcut.showOrHideClipboard);
-      //   updateSetting({
-      //     ...setting,
-      //     shortcut: {
-      //       ...setting.shortcut,
-      //       showOrHideClipboard: 'ctrl+alt+shift+c',
-      //     },
-      //   });
+      previousShortcut.current = setting.shortcut;
     }
-  }, [setting?.shortcut?.showOrHideClipboard]);
-
+  }, [setting?.shortcut]);
+  const [shortcutList, setShortcutList] = useState([
+    {
+      label: '显示或隐藏剪贴板',
+      action: 'showOrHideClipboard',
+      key: '',
+      event: () => {
+        invoke('show_panel');
+      },
+    },
+    {
+      label: '显示或隐藏设置面板',
+      action: 'showOrHideSetting',
+      key: 'Ctrl + S',
+      event: () => {
+        console.log('show or hide setting');
+        //   invoke('show_panel');
+      },
+    },
+  ]);
   // 注册快捷键
   const registerHotkey = (hotkey: string) => {
     console.log('register key');
@@ -37,7 +53,7 @@ const Shortcut = () => {
   useEffect(() => {
     if (shortcut) registerHotkey(shortcut);
   }, [shortcut]);
-  const startRecord = () => {
+  const startRecord = (action:string) => {
     setIsRecording(true);
   };
   const cancelRecord = () => {
@@ -95,10 +111,9 @@ const Shortcut = () => {
       keysPressed.current.delete(key);
 
       if (keysPressed.current.size === 0) {
-        cancelRecord();
+        // cancelRecord();
+        confirmShortcut();
       }
-      //   console.log('pressed')
-      //   console.log(keysPressed.current)
     };
 
     const convertKey = (key: string) => {
@@ -116,29 +131,60 @@ const Shortcut = () => {
       console.log('update');
       console.log(keysPressed.current);
       const keys = Array.from(keysPressed.current)
-        .sort((a, b) => a.localeCompare(b)) // 排序保证顺序一致
+        // .sort((a, b) => a.localeCompare(b)) // 排序保证顺序一致
         .join('+');
       console.log(keys);
       setShortcut(keys);
+      shortcutRef.current = keys;
     };
 
-    const confirmShortcut = () => {
-      console.log(keysPressed.current);
-      const newShortcut = Array.from(keysPressed.current)
-        .sort((a, b) => a.localeCompare(b))
-        .join('+');
+    const confirmShortcut = async () => {
+      setIsRecording(false);
+      if (!shortcutRef.current) return;
+
+      //   const newShortcut = Array.from(shortcutRef.current)
+      //     .sort((a, b) => a.localeCompare(b))
+      //     .join('+');
 
       // 需要至少一个普通键
       if (
-        newShortcut
+        shortcutRef.current
           .split('+')
           .some(k => !['command', 'ctrl', 'shift', 'alt'].includes(k))
       ) {
+        console.log('unbind and bind');
+        if (previousShortcut.current?.showOrHideClipboard) {
+          console.log(
+            'unregister :',
+            previousShortcut.current.showOrHideClipboard
+          );
+          try {
+            await unregister(previousShortcut.current.showOrHideClipboard);
+          } catch (err) {
+            console.error(err);
+          }
+        }
+        updateSetting({
+          ...setting,
+          shortcut: {
+            ...setting.shortcut,
+            showOrHideClipboard: shortcutRef.current,
+          },
+        });
+        console.log('register');
+        unregister(shortcutRef.current);
+        await register(shortcutRef.current, async event => {
+          console.log('show or hide');
+          if (event.state === 'Pressed') {
+            invoke('show_panel');
+          }
+        });
+        // console.log(newShortcut)
         // 解绑旧快捷键
-        hotkeys.unbind(shortcut);
+        // hotkeys.unbind(shortcut);
         // 注册新快捷键
-        setShortcut(newShortcut);
-        registerHotkey(newShortcut);
+        // setShortcut(newShortcut);
+        // registerHotkey(newShortcut);
         // localStorage.setItem('clipboardShortcut', newShortcut);
       }
 
@@ -160,8 +206,6 @@ const Shortcut = () => {
     const escapeEvent = (e: KeyboardEvent) => {
       console.log(e);
       if (e.code === 'Escape') {
-        // console.log(isRecording);
-        // console.log(isRecordingRef.current);
         if (isRecordingRef.current === true) {
           cancelRecord();
         }
@@ -185,7 +229,7 @@ const Shortcut = () => {
         variant="flat"
         // onSelectionChange={setValues}
       >
-        <ListboxItem
+        {/* <ListboxItem
           showDivider
           isReadOnly
           startContent={<div>显示/隐藏剪切板</div>}
@@ -194,12 +238,20 @@ const Shortcut = () => {
               <Kbd onClick={startRecord} keys={['command']}>
                 {isRecording && keysPressed.current.size === 0 && '录制中'}
                 {isRecording && keysPressed.current.size > 0 && shortcut}
-                {!isRecording && shortcut }
+                {!isRecording && shortcut}
                 {!isRecording && !shortcut && '设置快捷键'}
               </Kbd>
             </div>
           }
-        ></ListboxItem>
+        ></ListboxItem> */}
+        {shortcutList.map(shortcut => (
+          <ListboxItem
+            showDivider
+            key={shortcut.action}
+            startContent={<div>{shortcut.label}</div>}
+            endContent={<Kbd onClick={()=>startRecord(shortcut.action)}>{shortcut.key}</Kbd>}
+          ></ListboxItem>
+        ))}
       </Listbox>
       {/* <Button>保存</Button> */}
     </div>

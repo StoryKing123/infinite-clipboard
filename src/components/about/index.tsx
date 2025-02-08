@@ -1,8 +1,12 @@
+import { Image } from "@heroui/react";
+import Logo from '../../assets/icon.png'
+
 export const About = () => {
     return (
         <div>
             <div className="flex flex-col items-center justify-center p-8">
-                <h1 className="text-2xl font-bold mb-4">关于剪贴板</h1>
+                <Image src={Logo} width={75}></Image>
+                <h1 className="text-2xl font-bold mb-4">关于Infinite-Clipboard</h1>
                 
                 <div className="max-w-2xl text-center space-y-4">
                     <p className="text-gray-600 dark:text-gray-300">

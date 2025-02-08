@@ -18,6 +18,8 @@ const ClipboardList = ({ db }: ClipboardListProps) => {
     [selectedKeys]
   );
 
+ 
+
   const handleClearAllHistory = async () => {
     // await db?.execute('DELETE FROM clipboard');
     setClipboard([]);
@@ -85,11 +87,16 @@ const ClipboardList = ({ db }: ClipboardListProps) => {
               data-index={index}
               onPress={async e => {}}
               key={item.id}
-              textValue={item.id} 
+              textValue={item.id}
               // children={<div>123</div>}
             >
               {item.type === 0 && item.content}
-              {item.type === 1 && <Image width={100} src={`data:image/png;base64,${item.content}`}></Image>}
+              {item.type === 1 && (
+                <Image
+                  width={100}
+                  src={`data:image/png;base64,${item.content}`}
+                ></Image>
+              )}
             </ListboxItem>
           ))}
         </Listbox>

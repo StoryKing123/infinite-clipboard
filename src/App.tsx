@@ -269,7 +269,7 @@ function App() {
         <div>
           <Image src={logo} alt="logo" width={32} height={32} />
         </div>
-        <div className="ml-auto mr-2">
+        <div className=" mt-2 ml-auto mr-2">
           {auth?.token ? (
             <Chip
               variant="flat"
