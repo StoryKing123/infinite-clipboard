@@ -5,6 +5,7 @@ import { useAtom } from 'jotai';
 import { settingStore } from '../../store';
 import { register, unregister } from '@tauri-apps/plugin-global-shortcut';
 import { invoke } from '@tauri-apps/api/core';
+import { useImmer } from 'use-immer';
 
 const Shortcut = () => {
   const [isRecording, setIsRecording] = useState(false);
@@ -15,12 +16,39 @@ const Shortcut = () => {
   const shortcutRef = useRef<string>(undefined);
   const previousShortcut = useRef<SettingAtom['shortcut']>(undefined);
   useEffect(() => {
+    previousShortcut.current = setting.shortcut;
+
     if (setting?.shortcut?.showOrHideClipboard) {
       setShortcut(setting.shortcut.showOrHideClipboard);
-      previousShortcut.current = setting.shortcut;
+      setShortcutList(draft => {
+        const showOrHideClipboard = draft.find(
+          item => item.action === 'showOrHideClipboard'
+        );
+        if (showOrHideClipboard) {
+          showOrHideClipboard.key = setting.shortcut.showOrHideClipboard!;
+        }
+      });
+
+      //   const showOrHideClipboardIndex = shortcutList.findIndex(
+      //     item => item.action === 'showOrHideClipboard'
+      //   )!;
+
+      //   const showOrHideClipboard = shortcutList[showOrHideClipboardIndex];
+
+      //   showOrHideClipboard.key = setting.shortcut.showOrHideClipboard;
+    }
+    if (setting?.shortcut?.showOrHideSetting) {
+      setShortcutList(draft => {
+        const showOrHideSettingItem= draft.find(
+          item => item.action === 'showOrHideSetting'
+        )!;
+        // const showOrHideSettingItem = shortcutList[showOrHideSettingItemIndex];
+        showOrHideSettingItem.key = setting.shortcut.showOrHideSetting!;
+      });
+     
     }
   }, [setting?.shortcut]);
-  const [shortcutList, setShortcutList] = useState([
+  const [shortcutList, setShortcutList] = useImmer([
     {
       label: '显示或隐藏剪贴板',
       action: 'showOrHideClipboard',
@@ -53,7 +81,7 @@ const Shortcut = () => {
   useEffect(() => {
     if (shortcut) registerHotkey(shortcut);
   }, [shortcut]);
-  const startRecord = (action:string) => {
+  const startRecord = (action: string) => {
     setIsRecording(true);
   };
   const cancelRecord = () => {
@@ -249,7 +277,11 @@ const Shortcut = () => {
             showDivider
             key={shortcut.action}
             startContent={<div>{shortcut.label}</div>}
-            endContent={<Kbd onClick={()=>startRecord(shortcut.action)}>{shortcut.key}</Kbd>}
+            endContent={
+              <Kbd onClick={() => startRecord(shortcut.action)}>
+                {shortcut.key}
+              </Kbd>
+            }
           ></ListboxItem>
         ))}
       </Listbox>
