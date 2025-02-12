@@ -26,7 +26,7 @@ export const About = () => {
                     <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                         <h2 className="text-lg font-semibold mb-2">版本信息</h2>
                         <p className="text-gray-600 dark:text-gray-300">
-                            当前版本: v1.0.0
+                            当前版本: v0.0.3
                         </p>
                     </div>
                 </div>

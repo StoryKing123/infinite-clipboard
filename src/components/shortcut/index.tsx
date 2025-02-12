@@ -22,58 +22,41 @@ const Shortcut = () => {
   const previousShortcut = useRef<SettingAtom['shortcut']>(undefined);
   //   const currentAction = useRef<string>(undefined);
   const [currentAction, setCurrentAction] = useState<string>();
-  useEffect(() => {
-    console.log('update setting shortcut');
-    previousShortcut.current = setting.shortcut;
+    useEffect(() => {
+  //     console.log('update setting shortcut');
+  //     previousShortcut.current = setting.shortcut;
 
-    if (setting?.shortcut?.showOrHideClipboard) {
-      setShortcut(setting.shortcut.showOrHideClipboard);
-      setShortcutList(draft => {
-        const showOrHideClipboard = draft.find(
-          item => item.action === 'showOrHideClipboard'
-        );
-        if (showOrHideClipboard) {
-          showOrHideClipboard.key = setting.shortcut.showOrHideClipboard!;
-        }
-      });
+      if (setting?.shortcut?.showOrHideClipboard?.key) {
+        setShortcut(setting.shortcut.showOrHideClipboard.key);
+        setShortcutList(draft => {
+          const showOrHideClipboard = draft.find(
+            item => item.action === 'showOrHideClipboard'
+          );
+          if (showOrHideClipboard) {
+            showOrHideClipboard.key = setting.shortcut.showOrHideClipboard!.key!;
+          }
+        });
+      }
+      if (setting?.shortcut?.showOrHideSetting?.key) {
+        setShortcutList(draft => {
+          const showOrHideSettingItem = draft.find(
+            item => item.action === 'showOrHideSetting'
+          )!;
+          showOrHideSettingItem.key = setting.shortcut.showOrHideSetting!.key!;
+        });
+      }
+    }, [setting?.shortcut]);
 
-      //   const showOrHideClipboardIndex = shortcutList.findIndex(
-      //     item => item.action === 'showOrHideClipboard'
-      //   )!;
-
-      //   const showOrHideClipboard = shortcutList[showOrHideClipboardIndex];
-
-      //   showOrHideClipboard.key = setting.shortcut.showOrHideClipboard;
-    }
-    if (setting?.shortcut?.showOrHideSetting) {
-      setShortcutList(draft => {
-        const showOrHideSettingItem = draft.find(
-          item => item.action === 'showOrHideSetting'
-        )!;
-        // const showOrHideSettingItem = shortcutList[showOrHideSettingItemIndex];
-        showOrHideSettingItem.key = setting.shortcut.showOrHideSetting!;
-      });
-    }
-  }, [setting?.shortcut]);
   const [shortcutList, setShortcutList] = useImmer([
     {
       label: '显示或隐藏剪贴板',
       action: 'showOrHideClipboard',
       key: '',
-      event: (event: ShortcutEvent) => {
-        if (event.state === 'Pressed') {
-          invoke('show_panel');
-        }
-      },
     },
     {
       label: '显示或隐藏设置面板',
       action: 'showOrHideSetting',
-      key: 'Ctrl + S',
-      event: e => {
-        console.log('show or hide setting');
-        //   invoke('show_panel');
-      },
+      key: '',
     },
   ]);
   // 注册快捷键
@@ -105,6 +88,8 @@ const Shortcut = () => {
       if (!isRecordingRef.current) return;
 
       e.preventDefault();
+      //   return;
+
       const key = e.key.toLowerCase();
 
       // 转换按键符号
@@ -132,6 +117,7 @@ const Shortcut = () => {
 
     const handleKeyUp = (e: KeyboardEvent) => {
       if (!isRecordingRef.current) return;
+      //   return;
 
       // 处理确认和取消
       if (e.key === 'Enter') {
@@ -178,11 +164,7 @@ const Shortcut = () => {
     const confirmShortcut = async () => {
       setIsRecording(false);
       if (!shortcutRef.current) return;
-
-      //   const newShortcut = Array.from(shortcutRef.current)
-      //     .sort((a, b) => a.localeCompare(b))
-      //     .join('+');
-
+      console.log(shortcutRef.current);
       // 需要至少一个普通键
       if (
         shortcutRef.current
@@ -190,70 +172,78 @@ const Shortcut = () => {
           .some(k => !['command', 'ctrl', 'shift', 'alt'].includes(k))
       ) {
         if (currentAction) {
-          updateSetting({
+          updateSetting(setting => ({
             ...setting,
             shortcut: {
               ...setting.shortcut,
-              [currentAction]: shortcutRef.current,
+              [currentAction]: {key:shortcutRef.current},
             },
-          });
+          }));
+          console.log({
+            ...setting,
+            shortcut: {
+              ...setting.shortcut,
+              [currentAction]: {key:shortcutRef.current},
+            },
+          })
+        //   debugger
 
-          if (
-            previousShortcut.current?.[
-              currentAction as keyof SettingAtom['shortcut']
-            ]
-          ) {
-            console.log(
-              'unregister :',
-              previousShortcut.current.showOrHideClipboard
-            );
-            try {
-              await unregister(
-                previousShortcut.current?.[
-                  currentAction as keyof SettingAtom['shortcut']
-                ]!
-              );
-            } catch (err) {
-              console.error(err);
-            }
-          }
+          //       if (
+          //         previousShortcut.current?.[
+          //           currentAction as keyof SettingAtom['shortcut']
+          //         ]?.key
+          //       ) {
+          //         console.log(
+          //           'unregister :',
+          //           previousShortcut.current.showOrHideClipboard
+          //         );
+          //         try {
+          //           await unregister(
+          //             previousShortcut.current?.[
+          //               currentAction as keyof SettingAtom['shortcut']
+          //             ]!.key!
+          //           );
+          //         } catch (err) {
+          //           console.error(err);
+          //         }
+          //       }
 
-          const bindEvent = shortcutList.find(
-            item => item.action === currentAction
-          )?.event;
+                // const bindEvent = shortcutList.find(
+                //   item => item.action === currentAction
+                // )?.event;
 
-          if (bindEvent) {
-            await register(shortcutRef.current, bindEvent);
-          }
+                // if (bindEvent) {
+                //   await register(shortcutRef.current, bindEvent);
+                // }
         }
 
-        // console.log('unbind and bind');
-        // if (previousShortcut.current?.showOrHideClipboard) {
-        //   console.log(
-        //     'unregister :',
-        //     previousShortcut.current.showOrHideClipboard
-        //   );
-        //   try {
-        //     await unregister(previousShortcut.current.showOrHideClipboard);
-        //   } catch (err) {
-        //     console.error(err);
-        //   }
-        // }
-        // updateSetting({
-        //   ...setting,
-        //   shortcut: {
-        //     ...setting.shortcut,
-        //     showOrHideClipboard: shortcutRef.current,
-        //   },
-        // });
-        // console.log('register');
-        // unregister(shortcutRef.current);
-        // await register(shortcutRef.current, async event => {
-        //   console.log('show or hide');
-        //   if (event.state === 'Pressed') {
-        //     invoke('show_panel');
-        //   }
-        // });
+        //     // console.log('unbind and bind');
+        //     // if (previousShortcut.current?.showOrHideClipboard) {
+        //     //   console.log(
+        //     //     'unregister :',
+        //     //     previousShortcut.current.showOrHideClipboard
+        //     //   );
+        //     //   try {
+        //     //     await unregister(previousShortcut.current.showOrHideClipboard);
+        //     //   } catch (err) {
+        //     //     console.error(err);
+        //     //   }
+        //     // }
+        //     // updateSetting({
+        //     //   ...setting,
+        //     //   shortcut: {
+        //     //     ...setting.shortcut,
+        //     //     showOrHideClipboard: shortcutRef.current,
+        //     //   },
+        //     // });
+        //     // console.log('register');
+        //     // unregister(shortcutRef.current);
+        //     // await register(shortcutRef.current, async event => {
+        //     //   console.log('show or hide');
+        //     //   if (event.state === 'Pressed') {
+        //     //     invoke('show_panel');
+        //     //   }
+        //     // });
       }
 
       setIsRecording(false);
@@ -270,20 +260,20 @@ const Shortcut = () => {
       window.removeEventListener('keyup', handleKeyUp);
     };
   }, [isRecording]);
-  useEffect(() => {
-    const escapeEvent = (e: KeyboardEvent) => {
-      console.log(e);
-      if (e.code === 'Escape') {
-        if (isRecordingRef.current === true) {
-          cancelRecord();
-        }
-      }
-    };
-    window.document.addEventListener('keydown', escapeEvent);
-    return () => {
-      window.document.removeEventListener('keydown', escapeEvent);
-    };
-  }, []);
+  //   useEffect(() => {
+  //     const escapeEvent = (e: KeyboardEvent) => {
+  //       console.log(e);
+  //       if (e.code === 'Escape') {
+  //         if (isRecordingRef.current === true) {
+  //           cancelRecord();
+  //         }
+  //       }
+  //     };
+  //     window.document.addEventListener('keydown', escapeEvent);
+  //     return () => {
+  //       window.document.removeEventListener('keydown', escapeEvent);
+  //     };
+  //   }, []);
 
   const handleBindingAction = (action: string) => {
     // startRecord(shortcut.action)
@@ -302,6 +292,8 @@ const Shortcut = () => {
     }
     return <></>;
   };
+  console.log(shortcutRef.current);
+  console.log(shortcutList);
   return (
     <div>
       快捷键

@@ -28,6 +28,7 @@ import { nanoid } from 'nanoid';
 import UserSVG from './assets/user.svg';
 import Device from './components/device';
 import Shortcut from './components/shortcut';
+import { useShortcut } from './hooks/useShortcut';
 
 function App() {
   const [auth, setAuth] = useAtom(authStore);
@@ -93,7 +94,8 @@ function App() {
     }
 
     let events = new EventSourceWithHeaders(
-      `http://localhost:3000/events/connect?room_id=${auth?.email}&client_id=${clientid}`,
+      // `http://localhost:3000/events/connect?room_id=${auth?.email}&client_id=${clientid}`,
+      `https://ic.mcwpet.fun/events/connect?room_id=${auth?.email}&client_id=${clientid}`,
       {
         Authorization: `Bearer 321321`,
       }
@@ -203,6 +205,7 @@ function App() {
     // }
   };
   useTray();
+  useShortcut();
 
   // console.log(connection)
 

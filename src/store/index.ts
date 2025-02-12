@@ -1,4 +1,6 @@
+import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
+import { ShortcutEvent } from "@tauri-apps/plugin-global-shortcut";
 import Database from "@tauri-apps/plugin-sql";
 import { atom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
@@ -115,9 +117,30 @@ export const settingStore = atomWithStorage<SettingAtom>("setting", {
   id: nanoid(10),
   theme: "light",
   language: 'zh-cn',
-  shortcut: { showOrHideClipboard: undefined, showOrHideSetting: undefined }
+  shortcut: { showOrHideClipboard: { key: undefined }, showOrHideSetting: { key: undefined } }
 }, undefined, { getOnInit: true });
 
-export const shortCutStore = atom(get => get(settingStore))
+export const shortcutStore = atom(get => {
+  const shortcut = get(settingStore).shortcut;
+  if (shortcut.showOrHideClipboard) {
+    shortcut.showOrHideClipboard.event = (event: ShortcutEvent) => {
+      // console.log('show or hide clipboard')
+      if (event.state === 'Pressed') {
+        invoke('show_panel');
+      }
+    }
+  }
+  if (shortcut.showOrHideSetting) {
+    shortcut.showOrHideSetting.event = (event: ShortcutEvent) => {
+      if (event.state === 'Pressed') {
+        // invoke('show_panel');
+        console.log('show or hide setting')
+
+      }
+    }
+  }
+  return shortcut
+})
+
 
 export const isProgrammaticClipboardStore = atom(false)

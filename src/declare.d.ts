@@ -15,27 +15,32 @@ declare type AuthAtom = {
 
 declare type ClipboardEntry = {
   id: string;
-  type:number;
+  type: number;
   content: string;
   created_at: string;
 };
 
 declare type SettingAtom = {
-  id:string;
+  id: string;
   theme: Theme;
   language: string;
-  shortcut:{
-    showOrHideClipboard?:string,
-    showOrHideSetting?:string,
+  shortcut: {
+    showOrHideClipboard?: { key?: string; event?: ShortcutHandler},
+    showOrHideSetting?: { key?: string; event?: ShortcutHandler },
   }
 };
+
+declare type ShortcutAtom = {
+  key?: string;
+  event?: ShortcutEvent;
+}
 
 
 
 declare type ConnectionAtom = {
   id?: string;
   room?: string;
-  devices?: {clientID:string}[]
+  devices?: { clientID: string }[]
   status?: number
 }
 
