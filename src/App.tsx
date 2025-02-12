@@ -213,10 +213,6 @@ function App() {
   //   });
   // };
 
-  const initConnectionID = () => {
-    const id = nanoid(10);
-    setConnection({ ...connection, id: id });
-  };
 
   // 初始化
   useEffect(() => {
@@ -267,7 +263,7 @@ function App() {
       {/* Header */}
       <header className="flex items-center">
         <div>
-          <Image src={logo} alt="logo" width={32} height={32} />
+          {/* <Image src={logo} alt="logo" width={32} height={32} /> */}
         </div>
         <div className=" mt-2 ml-auto mr-2">
           {auth?.token ? (

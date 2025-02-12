@@ -3,7 +3,12 @@ import { useEffect, useRef, useState } from 'react';
 import hotkeys from 'hotkeys-js';
 import { useAtom } from 'jotai';
 import { settingStore } from '../../store';
-import { register, unregister } from '@tauri-apps/plugin-global-shortcut';
+import {
+  register,
+  ShortcutEvent,
+  ShortcutHandler,
+  unregister,
+} from '@tauri-apps/plugin-global-shortcut';
 import { invoke } from '@tauri-apps/api/core';
 import { useImmer } from 'use-immer';
 
@@ -15,7 +20,10 @@ const Shortcut = () => {
   const keysPressed = useRef(new Set<string>());
   const shortcutRef = useRef<string>(undefined);
   const previousShortcut = useRef<SettingAtom['shortcut']>(undefined);
+  //   const currentAction = useRef<string>(undefined);
+  const [currentAction, setCurrentAction] = useState<string>();
   useEffect(() => {
+    console.log('update setting shortcut');
     previousShortcut.current = setting.shortcut;
 
     if (setting?.shortcut?.showOrHideClipboard) {
@@ -39,13 +47,12 @@ const Shortcut = () => {
     }
     if (setting?.shortcut?.showOrHideSetting) {
       setShortcutList(draft => {
-        const showOrHideSettingItem= draft.find(
+        const showOrHideSettingItem = draft.find(
           item => item.action === 'showOrHideSetting'
         )!;
         // const showOrHideSettingItem = shortcutList[showOrHideSettingItemIndex];
         showOrHideSettingItem.key = setting.shortcut.showOrHideSetting!;
       });
-     
     }
   }, [setting?.shortcut]);
   const [shortcutList, setShortcutList] = useImmer([
@@ -53,15 +60,17 @@ const Shortcut = () => {
       label: '显示或隐藏剪贴板',
       action: 'showOrHideClipboard',
       key: '',
-      event: () => {
-        invoke('show_panel');
+      event: (event: ShortcutEvent) => {
+        if (event.state === 'Pressed') {
+          invoke('show_panel');
+        }
       },
     },
     {
       label: '显示或隐藏设置面板',
       action: 'showOrHideSetting',
       key: 'Ctrl + S',
-      event: () => {
+      event: e => {
         console.log('show or hide setting');
         //   invoke('show_panel');
       },
@@ -180,40 +189,71 @@ const Shortcut = () => {
           .split('+')
           .some(k => !['command', 'ctrl', 'shift', 'alt'].includes(k))
       ) {
-        console.log('unbind and bind');
-        if (previousShortcut.current?.showOrHideClipboard) {
-          console.log(
-            'unregister :',
-            previousShortcut.current.showOrHideClipboard
-          );
-          try {
-            await unregister(previousShortcut.current.showOrHideClipboard);
-          } catch (err) {
-            console.error(err);
+        if (currentAction) {
+          updateSetting({
+            ...setting,
+            shortcut: {
+              ...setting.shortcut,
+              [currentAction]: shortcutRef.current,
+            },
+          });
+
+          if (
+            previousShortcut.current?.[
+              currentAction as keyof SettingAtom['shortcut']
+            ]
+          ) {
+            console.log(
+              'unregister :',
+              previousShortcut.current.showOrHideClipboard
+            );
+            try {
+              await unregister(
+                previousShortcut.current?.[
+                  currentAction as keyof SettingAtom['shortcut']
+                ]!
+              );
+            } catch (err) {
+              console.error(err);
+            }
+          }
+
+          const bindEvent = shortcutList.find(
+            item => item.action === currentAction
+          )?.event;
+
+          if (bindEvent) {
+            await register(shortcutRef.current, bindEvent);
           }
         }
-        updateSetting({
-          ...setting,
-          shortcut: {
-            ...setting.shortcut,
-            showOrHideClipboard: shortcutRef.current,
-          },
-        });
-        console.log('register');
-        unregister(shortcutRef.current);
-        await register(shortcutRef.current, async event => {
-          console.log('show or hide');
-          if (event.state === 'Pressed') {
-            invoke('show_panel');
-          }
-        });
-        // console.log(newShortcut)
-        // 解绑旧快捷键
-        // hotkeys.unbind(shortcut);
-        // 注册新快捷键
-        // setShortcut(newShortcut);
-        // registerHotkey(newShortcut);
-        // localStorage.setItem('clipboardShortcut', newShortcut);
+
+        // console.log('unbind and bind');
+        // if (previousShortcut.current?.showOrHideClipboard) {
+        //   console.log(
+        //     'unregister :',
+        //     previousShortcut.current.showOrHideClipboard
+        //   );
+        //   try {
+        //     await unregister(previousShortcut.current.showOrHideClipboard);
+        //   } catch (err) {
+        //     console.error(err);
+        //   }
+        // }
+        // updateSetting({
+        //   ...setting,
+        //   shortcut: {
+        //     ...setting.shortcut,
+        //     showOrHideClipboard: shortcutRef.current,
+        //   },
+        // });
+        // console.log('register');
+        // unregister(shortcutRef.current);
+        // await register(shortcutRef.current, async event => {
+        //   console.log('show or hide');
+        //   if (event.state === 'Pressed') {
+        //     invoke('show_panel');
+        //   }
+        // });
       }
 
       setIsRecording(false);
@@ -244,6 +284,24 @@ const Shortcut = () => {
       window.document.removeEventListener('keydown', escapeEvent);
     };
   }, []);
+
+  const handleBindingAction = (action: string) => {
+    // startRecord(shortcut.action)
+    if (!setIsRecording) return;
+    setIsRecording(true);
+    setCurrentAction(action);
+    // currentAction.current = koction;
+  };
+  const renderCurrentKbd = (shortcut: (typeof shortcutList)[number]) => {
+    if (isRecording && currentAction === shortcut.action)
+      return <span>录制中</span>;
+    else if (isRecording && currentAction !== shortcut.action) {
+      return <span>{shortcut.key}</span>;
+    } else if (!isRecording) {
+      return <span>{shortcut.key}</span>;
+    }
+    return <></>;
+  };
   return (
     <div>
       快捷键
@@ -275,11 +333,16 @@ const Shortcut = () => {
         {shortcutList.map(shortcut => (
           <ListboxItem
             showDivider
+            isReadOnly
             key={shortcut.action}
             startContent={<div>{shortcut.label}</div>}
             endContent={
-              <Kbd onClick={() => startRecord(shortcut.action)}>
-                {shortcut.key}
+              <Kbd onClick={() => handleBindingAction(shortcut.action)}>
+                {renderCurrentKbd(shortcut)}
+                {/* {isRecording &&
+                  currentAction === shortcut.action &&
+                  shortcut.key}
+                  {!isRecording && shortcut.key} */}
               </Kbd>
             }
           ></ListboxItem>

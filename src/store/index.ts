@@ -115,8 +115,9 @@ export const settingStore = atomWithStorage<SettingAtom>("setting", {
   id: nanoid(10),
   theme: "light",
   language: 'zh-cn',
-  shortcut: { showOrHideClipboard: undefined }
+  shortcut: { showOrHideClipboard: undefined, showOrHideSetting: undefined }
 }, undefined, { getOnInit: true });
 
+export const shortCutStore = atom(get => get(settingStore))
 
 export const isProgrammaticClipboardStore = atom(false)

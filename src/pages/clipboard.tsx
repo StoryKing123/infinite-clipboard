@@ -140,11 +140,11 @@ const Clipboard = () => {
         onKeyDown={handleKeyDown}
         className="flex-1 overflow-y-auto"
         aria-label="Actions"
-        isVirtualized
-        virtualization={{
-          maxListboxHeight: 400,
-          itemHeight: 40,
-        }}
+        // isVirtualized
+        // virtualization={{
+        // maxListboxHeight: 400,
+        // itemHeight: 40,
+        // }}
         // onAction={key => alert(key)}
       >
         {filteredClipboard.map((item, index) => (
@@ -185,7 +185,13 @@ const Clipboard = () => {
             }}
             key={item.id}
           >
-            {item.type === 0 && item.content}
+            {item.type === 0 && (
+              <span
+              // className=' whitespace-nowrap  overflow-hidden text-ellipsis'
+              >
+                {item.content}
+              </span>
+            )}
             {item.type === 1 && (
               <Image
                 width={100}
