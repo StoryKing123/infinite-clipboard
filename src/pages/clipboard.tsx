@@ -1,5 +1,5 @@
 import { KeyboardEventHandler, useEffect, useRef, useState } from 'react';
-import { Listbox, ListboxSection, ListboxItem } from '@heroui/listbox';
+import { Listbox, ListboxItem } from '@heroui/react';
 import { Input, Image } from '@heroui/react';
 import {
   clipboardStore,
