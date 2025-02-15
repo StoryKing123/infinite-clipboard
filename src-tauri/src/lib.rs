@@ -2,99 +2,99 @@ mod commands;
 
 use serde_json::{json, to_string};
 use tauri::{
-    http::{self, Response}, menu::{Menu, MenuItem}, tray::TrayIconBuilder, App, AppHandle, Emitter, Manager, Url, WebviewUrl, WebviewWindow, WebviewWindowBuilder
+    http::{self, Response},
+    menu::{Menu, MenuItem},
+    tray::TrayIconBuilder,
+    App, AppHandle, Emitter, Manager, Url, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
 };
 
-use tauri_plugin_log::{Target, TargetKind};
-use tauri_plugin_sql::{Migration, MigrationKind};
+#[cfg(target_os = "macos")]
 use tauri_nspanel::{
     cocoa::appkit::NSWindowCollectionBehavior, panel_delegate, ManagerExt, WebviewWindowExt,
-  };
+};
+use tauri_plugin_log::{Target, TargetKind};
+use tauri_plugin_sql::{Migration, MigrationKind};
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
-
+#[cfg(target_os = "macos")]
 fn init(app_handle: &AppHandle) {
     let window: WebviewWindow = app_handle.get_webview_window("mini-clipboard").unwrap();
-  
+
     let panel = window.to_panel().unwrap();
-  
+
     let delegate = panel_delegate!(MyPanelDelegate {
-      window_did_become_key,
-      window_did_resign_key
+        window_did_become_key,
+        window_did_resign_key
     });
-  
+
     let handle = app_handle.to_owned();
-  
+
     delegate.set_listener(Box::new(move |delegate_name: String| {
-      match delegate_name.as_str() {
-        "window_did_become_key" => {
-          let app_name = handle.package_info().name.to_owned();
-  
-          println!("[info]: {:?} panel becomes key window!", app_name);
+        match delegate_name.as_str() {
+            "window_did_become_key" => {
+                let app_name = handle.package_info().name.to_owned();
+
+                println!("[info]: {:?} panel becomes key window!", app_name);
+            }
+            "window_did_resign_key" => {
+                println!("[info]: panel resigned from key window!");
+            }
+            _ => (),
         }
-        "window_did_resign_key" => {
-          println!("[info]: panel resigned from key window!");
-        }
-        _ => (),
-      }
     }));
-  
+
     // Set the window to float level
     #[allow(non_upper_case_globals)]
     const NSFloatWindowLevel: i32 = 4;
     panel.set_level(NSFloatWindowLevel);
-  
+
     #[allow(non_upper_case_globals)]
     const NSWindowStyleMaskNonActivatingPanel: i32 = 1 << 7;
     // Ensures the panel cannot activate the app
     panel.set_style_mask(NSWindowStyleMaskNonActivatingPanel);
-  
+
     // Allows the panel to:
     // - display on the same space as the full screen window
     // - join all spaces
     panel.set_collection_behaviour(
-      NSWindowCollectionBehavior::NSWindowCollectionBehaviorFullScreenAuxiliary
-        | NSWindowCollectionBehavior::NSWindowCollectionBehaviorCanJoinAllSpaces,
+        NSWindowCollectionBehavior::NSWindowCollectionBehaviorFullScreenAuxiliary
+            | NSWindowCollectionBehavior::NSWindowCollectionBehaviorCanJoinAllSpaces,
     );
-  
+
     panel.set_delegate(delegate);
-  }
+}
 
-  #[tauri::command]
-  fn exit_app(handle:AppHandle){
+#[tauri::command]
+fn exit_app(handle: AppHandle) {
     handle.exit(1);
-  }
-  
-  #[tauri::command]
-  fn show_panel(handle: AppHandle) {
+}
+
+#[tauri::command]
+fn show_panel(handle: AppHandle) {
     let panel = handle.get_webview_panel("mini-clipboard").unwrap();
-  
+
     panel.show();
-  }
-  
-  #[tauri::command]
-  fn hide_panel(handle: AppHandle) {
+}
+
+#[tauri::command]
+fn hide_panel(handle: AppHandle) {
     let panel = handle.get_webview_panel("mini-clipboard").unwrap();
-  
+
     panel.order_out(None);
-  }
-  
-  #[tauri::command]
-  fn close_panel(handle: AppHandle) {
+}
+
+#[tauri::command]
+fn close_panel(handle: AppHandle) {
     let panel = handle.get_webview_panel("mini-clipboard").unwrap();
-  
+
     panel.set_released_when_closed(true);
-  
+
     panel.close();
-  }
-  
-
-
-
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -112,12 +112,10 @@ pub fn run() {
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_http::init())
         .setup(|app| {
-
-
             let mini_window = tauri::WebviewWindowBuilder::new(
                 app,
-                "mini-clipboard", // 窗口标签
-                tauri::WebviewUrl::App("clipboard".into()) // URL 路径
+                "mini-clipboard",                           // 窗口标签
+                tauri::WebviewUrl::App("clipboard".into()), // URL 路径
             )
             .title("Mini Clipboard")
             .inner_size(300.0, 600.0)
@@ -128,14 +126,15 @@ pub fn run() {
             .transparent(true)
             .build()?;
 
-            
             // 初始时隐藏窗口
             mini_window.hide()?;
-            init(app.app_handle());
-        //   mini_window.to_panel();
 
+            // #[cfg(target_os = "macos")]
+            if cfg!(target_os = "macos") {
+                init(app.app_handle());
+            }
+            //   mini_window.to_panel();
 
-            
             Ok(())
         })
         .register_uri_scheme_protocol("infiniteclipboard", |app, req| {
@@ -202,7 +201,15 @@ pub fn run() {
         .plugin(tauri_nspanel::init())
         .plugin(tauri_plugin_clipboard::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, commands::send::sendText,show_panel,hide_panel,close_panel,exit_app, commands::send::paste])
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            commands::send::sendText,
+            show_panel,
+            hide_panel,
+            close_panel,
+            exit_app,
+            commands::send::paste
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
