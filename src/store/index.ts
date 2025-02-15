@@ -11,7 +11,7 @@ export const authStore = atomWithStorage<AuthAtom | undefined>(
   "auth",
   undefined
 );
-const dbInstance = await Database.load('sqlite:app.db');
+// const dbInstance = await Database.load('sqlite:app.db');
 export const baseClipboardAtom = atom<ClipboardEntry[]>([]);
 
 export const insertClipboard = atom(null,
