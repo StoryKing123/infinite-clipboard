@@ -75,25 +75,43 @@ fn exit_app(handle: AppHandle) {
 
 #[tauri::command]
 fn show_panel(handle: AppHandle) {
-    let panel = handle.get_webview_panel("mini-clipboard").unwrap();
-
-    panel.show();
+    if cfg!(target_os = "macos") {
+        #[cfg(target_os = "macos")]
+        {
+            let panel = handle.get_webview_panel("mini-clipboard").unwrap();
+            panel.show();
+        }
+    } else {
+        let window = handle.get_webview_window("mini-clipboard").unwrap();
+        window.show();
+    }
 }
 
 #[tauri::command]
 fn hide_panel(handle: AppHandle) {
-    let panel = handle.get_webview_panel("mini-clipboard").unwrap();
-
-    panel.order_out(None);
+    if cfg!(target_os = "macos") {
+        #[cfg(target_os = "macos")]
+        {
+            let panel = handle.get_webview_panel("mini-clipboard").unwrap();
+            panel.order_out(None);
+        }
+    }
 }
 
 #[tauri::command]
 fn close_panel(handle: AppHandle) {
-    let panel = handle.get_webview_panel("mini-clipboard").unwrap();
+    if cfg!(target_os = "macos") {
+        #[cfg(target_os = "macos")]
+        {
+            let panel = handle.get_webview_panel("mini-clipboard").unwrap();
 
-    panel.set_released_when_closed(true);
+            panel.set_released_when_closed(true);
 
-    panel.close();
+            panel.close();
+            // let panel = handle.get_webview_panel("mini-clipboard").unwrap();
+            // panel.order_out(None);
+        }
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
