@@ -108,7 +108,7 @@ pub fn run() {
         },
     ];
 
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_http::init())
         .setup(|app| {
@@ -131,6 +131,7 @@ pub fn run() {
 
             // #[cfg(target_os = "macos")]
             if cfg!(target_os = "macos") {
+                #[cfg(target_os = "macos")]
                 init(app.app_handle());
             }
             //   mini_window.to_panel();
@@ -197,8 +198,13 @@ pub fn run() {
                     Target::new(TargetKind::Webview),
                 ])
                 .build(),
-        )
-        .plugin(tauri_nspanel::init())
+        );
+
+    #[cfg(target_os = "macos")]
+    {
+        builder = builder.plugin(tauri_nspanel::init());
+    }
+    builder
         .plugin(tauri_plugin_clipboard::init())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
