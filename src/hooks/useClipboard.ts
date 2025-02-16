@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { use, useEffect, useRef } from 'react';
 import { useAtom } from 'jotai';
-import { clipboardStore, insertClipboard, isProgrammaticClipboardStore } from '../store';
+import { clipboardStore, connectionStore, insertClipboard, isProgrammaticClipboardStore, settingStore } from '../store';
 import Database from '@tauri-apps/plugin-sql';
 import { ClipboardEntry } from '../types';
 import {
@@ -11,6 +11,7 @@ import {
 } from 'tauri-plugin-clipboard-api';
 import { UnlistenFn } from '@tauri-apps/api/event';
 import { getBase64ImageSize } from '../utils/image';
+import request from '../request';
 
 export const useClipboard = () => {
     const [clipboard, setClipboard] = useAtom(clipboardStore);
@@ -21,6 +22,24 @@ export const useClipboard = () => {
     const db = useRef<Database>(undefined);
     const [isProgrammaticClipboard] = useAtom(isProgrammaticClipboardStore);
     const [, insert] = useAtom(insertClipboard);
+    const [connection] = useAtom(connectionStore);
+    const [setting] = useAtom(settingStore);
+
+    const settingRef = useRef<typeof setting>(setting);
+    const connectionRef = useRef<typeof connection>(connection);
+
+    useEffect(() => {
+        settingRef.current = setting;
+    }, [setting])
+    useEffect(() => {
+        connectionRef.current = connection;
+    }, [connection])
+
+    const sendClipboardBroadcast = (type: number, data: string) => {
+        const roomId = connectionRef.current?.room;
+        const deviceId = settingRef.current.id;
+        request.post(`events/broadcast/${roomId}/${deviceId}`, { message: { data: data, type: 0 } })
+    }
 
     const initDBInstance = async () => {
         const dbInstance = await Database.load('sqlite:app.db');
@@ -67,6 +86,13 @@ export const useClipboard = () => {
                 type: 0,
                 created_at: new Date().toISOString(),
             }])
+            sendClipboardBroadcast(0,newText)
+
+            // console.log(connection)
+            // debugger
+
+
+
 
             // const res = await db.current?.execute(
             //     'INSERT INTO clipboard (content, created_at,type) VALUES (?, ?,0)',
@@ -101,7 +127,9 @@ export const useClipboard = () => {
                 console.log('image too large')
                 return
             }
+
             insert([{ content: newImage, created_at: new Date().toISOString(), type: 1 }])
+            sendClipboardBroadcast(1,newImage)
             // const res = await db.current?.execute(
             //     'INSERT INTO clipboard (content, created_at) VALUES (?, ?, 1)',
             //     [newImage, new Date().toISOString()]

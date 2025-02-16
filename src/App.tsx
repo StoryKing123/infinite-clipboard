@@ -95,7 +95,7 @@ function App() {
 
     let events = new EventSourceWithHeaders(
       // `http://localhost:3000/events/connect?room_id=${auth?.email}&client_id=${clientid}`,
-      `https://ic.mcwpet.fun/events/connect?room_id=${auth?.email}&client_id=${clientid}`,
+      `${import.meta.env.VITE_API_URL}/events/connect?room_id=${auth?.email}&client_id=${clientid}`,
       {
         Authorization: `Bearer 321321`,
       }
@@ -107,13 +107,14 @@ function App() {
       const initRes = JSON.parse(connectionMessage) as { devices: any[] };
       setConnection({
         id: 'client1',
-        room: 'room1',
+        room: auth?.email,
         status: 1,
         devices: initRes.devices,
       });
       axios
         .get(
-          `http://localhost:3000/events/connection/update/${auth?.email}/${clientid}`
+          // `http://localhost:3000/events/connection/update/${auth?.email}/${clientid}`
+          `https://ic.mcwpet.fun/events/connection/update/${auth?.email}/${clientid}`
         )
         .then(res => {
           console.log(res);
@@ -167,7 +168,7 @@ function App() {
       if (res.action === 'update_connection') {
         setConnection({
           id: 'client1',
-          room: 'room1',
+          room: auth?.email,
           status: 1,
           devices: res.message.devices,
         });
