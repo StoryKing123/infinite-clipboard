@@ -4,7 +4,7 @@ import { invoke } from '@tauri-apps/api/core';
 import logo from './assets/icon.png';
 import { listen } from '@tauri-apps/api/event';
 import { useAtom } from 'jotai';
-import { authStore, connectionStore, settingStore } from './store';
+import { authStore, connectionStore, insertClipboard, settingStore } from './store';
 import Database from '@tauri-apps/plugin-sql';
 import { Button, Chip, Image, Tab, Tabs } from '@heroui/react';
 import Setting from './components/setting';
@@ -40,6 +40,7 @@ function App() {
   const clientid = setting.id;
   const [connection, setConnection] = useAtom(connectionStore);
   const { clipboard: clipboardData, insertClipbaord } = useClipboard();
+  const [, insert] = useAtom(insertClipboard);
 
   useTheme();
   useLanguage();
@@ -173,9 +174,15 @@ function App() {
           devices: res.message.devices,
         });
       }
-      if (res.action === 'receive_text') {
+      if (res.action === 'receive_message') {
+        // insert()
+        insert([{
+          content: res.message.data,
+          type: res.message.type,
+          created_at: new Date().toISOString(),
+      }])
         // debugger
-        insertClipbaord(res.message);
+        // insertClipbaord(res.message);
       }
       // console.log(data);
 
