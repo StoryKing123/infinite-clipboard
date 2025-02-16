@@ -44,6 +44,16 @@ export const useClipboard = () => {
     const initDBInstance = async () => {
         const dbInstance = await Database.load('sqlite:app.db');
         db.current = dbInstance;
+
+        await db.current!.execute(`
+            CREATE TABLE IF NOT EXISTS clipboard (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                type INTEGER,
+                content TEXT,
+                created_at DATETIME
+            );
+             ALTER TABLE clipboard ADD COLUMN type INTEGER DEFAULT 0;
+          `);
     };
 
     useEffect(() => {
@@ -86,7 +96,7 @@ export const useClipboard = () => {
                 type: 0,
                 created_at: new Date().toISOString(),
             }])
-            sendClipboardBroadcast(0,newText)
+            sendClipboardBroadcast(0, newText)
 
             // console.log(connection)
             // debugger
@@ -129,7 +139,7 @@ export const useClipboard = () => {
             }
 
             insert([{ content: newImage, created_at: new Date().toISOString(), type: 1 }])
-            sendClipboardBroadcast(1,newImage)
+            sendClipboardBroadcast(1, newImage)
             // const res = await db.current?.execute(
             //     'INSERT INTO clipboard (content, created_at) VALUES (?, ?, 1)',
             //     [newImage, new Date().toISOString()]
