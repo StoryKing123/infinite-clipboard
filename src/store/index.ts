@@ -45,6 +45,16 @@ export const insertClipboard = atom(null,
     // set(baseClipboardAtom, prev => [...fullEntries, ...prev]);
   })
 
+export const deleteClipboard = atom(null, async (get, set, ids: string[]) => {
+  const db = await Database.load('sqlite:app.db');
+  if (ids.length === 0) {
+    await db.execute(`DELETE FROM clipboard WHERE id `);
+  } else {
+    await db.execute(`DELETE FROM clipboard WHERE id IN (${ids.join(',')})`);
+  }
+  await emit('clipboard-db-changed', {});
+})
+
 // 组合原子
 export const clipboardStore = atom(
   (get) => get(baseClipboardAtom),
@@ -143,4 +153,4 @@ export const shortcutStore = atom(get => {
 })
 
 
-export const isProgrammaticClipboardStore = atom(false)
+export const isProgrammaticClipboardStore = atomWithStorage('isProgrammaticClipabord', false)

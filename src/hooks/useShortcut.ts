@@ -1,11 +1,10 @@
 import { useEffect, useRef } from "react"
-import { settingStore, shortcutStore } from "../store"
+import {  shortcutStore } from "../store"
 import { useAtom } from "jotai"
 import { register, unregister } from "@tauri-apps/plugin-global-shortcut"
 
 export const useShortcut = () => {
     const [shortcutList] = useAtom(shortcutStore)
-    const [setting] = useAtom(settingStore)
     const previousShortcutList = useRef<SettingAtom['shortcut']>(undefined)
     useEffect(() => {
         const keys = Object.keys(shortcutList);
@@ -19,6 +18,7 @@ export const useShortcut = () => {
         }
         keys.forEach(key => {
             const event = shortcutList![key as keyof SettingAtom['shortcut']]?.event!
+            unregister(shortcutList![key as keyof SettingAtom['shortcut']]?.key!)
             register(shortcutList![key as keyof SettingAtom['shortcut']]?.key!, event)
         })
         previousShortcutList.current = shortcutList

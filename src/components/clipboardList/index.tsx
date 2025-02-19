@@ -1,9 +1,9 @@
 import { Button, Image, Listbox, ListboxItem } from '@heroui/react';
 import type { Selection } from '@heroui/react';
 import { useAtom } from 'jotai';
-import { baseClipboardAtom, clipboardStore } from '../../store';
+import { baseClipboardAtom, clipboardStore, deleteClipboard } from '../../store';
 import Database from '@tauri-apps/plugin-sql';
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 
 interface ClipboardListProps {
   db: Database | undefined;
@@ -12,24 +12,27 @@ interface ClipboardListProps {
 const ClipboardList = ({ db }: ClipboardListProps) => {
   const [clipboard, setClipboard] = useAtom(clipboardStore);
   const [selectedKeys, setSelectedKeys] = useState(new Set<string>([]));
+  const [, deleteClip] = useAtom(deleteClipboard);
 
   const selectedValue = useMemo(
     () => Array.from(selectedKeys).join(', '),
     [selectedKeys]
   );
+  const deferredClipboard = useDeferredValue(clipboard)
 
  
 
   const handleClearAllHistory = async () => {
     // await db?.execute('DELETE FROM clipboard');
-    setClipboard([]);
+    // setClipboard([]);
   };
 
   const handleClearHistory = async () => {
-    await db?.execute('DELETE FROM clipboard WHERE id = ?', [selectedKeys]);
-    setClipboard(
-      clipboard.filter(item => !selectedKeys.has(item.id.toString()))
-    );
+    // await db?.execute('DELETE FROM clipboard WHERE id = ?', [selectedKeys]);
+    // setClipboard(
+    //   clipboard.filter(item => !selectedKeys.has(item.id.toString()))
+    // );
+    deleteClip([...selectedKeys])
   };
 
   const handleSelectionChange = (keys: Selection) => {
@@ -57,38 +60,28 @@ const ClipboardList = ({ db }: ClipboardListProps) => {
           清除全部
         </Button>
       </div>
-      <div className="flex-1 overflow-y-scroll mt-2">
-        {/* <Listbox
-          aria-label="Multiple selection example"
-          selectedKeys={selectedKeys}
-          selectionMode="multiple"
-          variant="flat"
-          onSelectionChange={(e)=>{
-            console.log(e)
-          }}
-        >
-          <ListboxItem key="text">Text</ListboxItem>
-          <ListboxItem key="number">Number</ListboxItem>
-          <ListboxItem key="date">Date</ListboxItem>
-          <ListboxItem key="single_date">Single Date</ListboxItem>
-          <ListboxItem key="iteration">Iteration</ListboxItem>
-        </Listbox> */}
+      <div className="flex-1 mt-2">
+       
         <Listbox
           //  disallowEmptySelection
-          aria-label="Multiple selection example"
+          // aria-label="Multiple selection example"
           selectedKeys={selectedKeys}
           selectionMode="multiple"
           variant="flat"
           onSelectionChange={handleSelectionChange}
+          isVirtualized
+          virtualization={{
+            maxListboxHeight:400,
+            itemHeight:40
+          }}
         >
-          {clipboard.map((item, index) => (
+          {deferredClipboard.map((item, index) => (
             <ListboxItem
               id={item.id.toString()}
               data-index={index}
               onPress={async e => {}}
               key={item.id}
               textValue={item.id}
-              // children={<div>123</div>}
             >
               {item.type === 0 && item.content}
               {item.type === 1 && (

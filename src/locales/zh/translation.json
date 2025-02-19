@@ -5,6 +5,13 @@
       "part1": "Um loszulegen, ändere <1>src/App(DE).js</1> speicheren und neuladen.",
       "part2": "Ändere die Sprachen zwischen deutsch und englisch mit Hilfe der beiden Schalter."
     },
+    "tabs": {
+      "clipboard": "剪贴板",
+      "setting": "设置",
+      "about": "关于",
+      "devices": "设备",
+      "shortcut": "快捷键"
+    },
     "pages": {
       "setting": {
         "language": {
@@ -12,6 +19,10 @@
         },
         "theme": {
           "label": "主题"
+        },
+        "control": {
+          "save": "保存",
+          "reset": "重置"
         }
       }
     },

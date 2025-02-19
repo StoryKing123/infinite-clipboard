@@ -10,7 +10,7 @@ const Device = () => {
       <Listbox
         classNames={{
         //   base: 'max-w-xs',
-          list: 'max-h-[300px] overflow-scroll',
+          // list: 'max-h-[300px] overflow-scroll',
         }}
         defaultSelectedKeys={['1']}
         // items={connection?.devices}

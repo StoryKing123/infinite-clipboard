@@ -300,11 +300,11 @@ const Shortcut = () => {
       <Listbox
         classNames={{
           //   base: 'max-w-xs',
-          list: 'max-h-[300px] overflow-scroll',
+          // list: 'max-h-[300px] overflow-scroll',
         }}
-        selectionMode="multiple"
+        // selectionMode="multiple"
         // topContent={topContent}
-        variant="flat"
+        // variant="flat"
         // onSelectionChange={setValues}
       >
         {/* <ListboxItem

@@ -140,11 +140,11 @@ const Clipboard = () => {
         onKeyDown={handleKeyDown}
         className="flex-1 overflow-y-auto"
         aria-label="Actions"
-        // isVirtualized
-        // virtualization={{
-        // maxListboxHeight: 400,
-        // itemHeight: 40,
-        // }}
+        isVirtualized
+          virtualization={{
+          maxListboxHeight: 400,
+          itemHeight: 40,
+          }}
         // onAction={key => alert(key)}
       >
         {filteredClipboard.map((item, index) => (

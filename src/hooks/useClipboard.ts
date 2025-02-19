@@ -24,9 +24,15 @@ export const useClipboard = () => {
     const [, insert] = useAtom(insertClipboard);
     const [connection] = useAtom(connectionStore);
     const [setting] = useAtom(settingStore);
+    const isProgrammaticClipboardRef = useRef<typeof isProgrammaticClipboard>(isProgrammaticClipboard);
 
     const settingRef = useRef<typeof setting>(setting);
     const connectionRef = useRef<typeof connection>(connection);
+
+    useEffect(() => {
+        isProgrammaticClipboardRef.current = isProgrammaticClipboard;
+        // debugger
+    }, [isProgrammaticClipboard])
 
     useEffect(() => {
         settingRef.current = setting;
@@ -38,7 +44,7 @@ export const useClipboard = () => {
     const sendClipboardBroadcast = (type: number, data: string) => {
         const roomId = connectionRef.current?.room;
         const deviceId = settingRef.current.id;
-        request.post(`events/broadcast/${roomId}/${deviceId}`, { message: { data: data, type: 0 } })
+        request.post(`events/broadcast/${roomId}/${deviceId}`, { message: { data: data, type: type } })
     }
 
     const initDBInstance = async () => {
@@ -81,7 +87,7 @@ export const useClipboard = () => {
 
         console.log('register event')
         unlistenTextUpdate.current = await onTextUpdate(async newText => {
-            if (isProgrammaticClipboard) return
+            if (isProgrammaticClipboardRef.current) return
 
             console.log('text copy')
             if (
@@ -98,16 +104,6 @@ export const useClipboard = () => {
             }])
             sendClipboardBroadcast(0, newText)
 
-            // console.log(connection)
-            // debugger
-
-
-
-
-            // const res = await db.current?.execute(
-            //     'INSERT INTO clipboard (content, created_at,type) VALUES (?, ?,0)',
-            //     [newText, new Date().toISOString()]
-            // );
 
             // if (res && res.lastInsertId) {
             //     setClipboard(prev => [
@@ -123,7 +119,7 @@ export const useClipboard = () => {
         });
 
         unlistenImageUpdate.current = await onImageUpdate(async newImage => {
-            if (isProgrammaticClipboard) return
+            if (isProgrammaticClipboardRef.current) return
             console.log('image copy')
             // console.log(newImage)
 
@@ -205,6 +201,7 @@ export const useClipboard = () => {
 
 
     //     return () => {
+    
     //         unlistenClipboard.current?.();
     //         unlistenTextUpdate.current?.();
     //         unlistenImageUpdate.current?.();

@@ -19,6 +19,7 @@ export const About = () => {
                             <li>• 自动保存剪贴板历史</li>
                             <li>• 支持多设备同步</li>
                             <li>• 支持暗黑模式</li>
+                            <li>• 端对端加密</li>
                             <li>• GitHub账号登录</li>
                         </ul>
                     </div>

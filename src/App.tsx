@@ -4,7 +4,12 @@ import { invoke } from '@tauri-apps/api/core';
 import logo from './assets/icon.png';
 import { listen } from '@tauri-apps/api/event';
 import { useAtom } from 'jotai';
-import { authStore, connectionStore, insertClipboard, settingStore } from './store';
+import {
+  authStore,
+  connectionStore,
+  insertClipboard,
+  settingStore,
+} from './store';
 import Database from '@tauri-apps/plugin-sql';
 import { Button, Chip, Image, Tab, Tabs } from '@heroui/react';
 import Setting from './components/setting';
@@ -96,7 +101,9 @@ function App() {
 
     let events = new EventSourceWithHeaders(
       // `http://localhost:3000/events/connect?room_id=${auth?.email}&client_id=${clientid}`,
-      `${import.meta.env.VITE_API_URL}/events/connect?room_id=${auth?.email}&client_id=${clientid}`,
+      `${import.meta.env.VITE_API_URL}/events/connect?room_id=${
+        auth?.email
+      }&client_id=${clientid}`,
       {
         Authorization: `Bearer 321321`,
       }
@@ -115,7 +122,9 @@ function App() {
       axios
         .get(
           // `http://localhost:3000/events/connection/update/${auth?.email}/${clientid}`
-          `https://ic.mcwpet.fun/events/connection/update/${auth?.email}/${clientid}`
+          `${import.meta.env.VITE_API_URL}/events/connection/update/${
+            auth?.email
+          }/${clientid}`
         )
         .then(res => {
           console.log(res);
@@ -176,11 +185,13 @@ function App() {
       }
       if (res.action === 'receive_message') {
         // insert()
-        insert([{
-          content: res.message.data,
-          type: res.message.type,
-          created_at: new Date().toISOString(),
-      }])
+        insert([
+          {
+            content: res.message.data,
+            type: res.message.type,
+            created_at: new Date().toISOString(),
+          },
+        ]);
         // debugger
         // insertClipbaord(res.message);
       }
@@ -223,7 +234,6 @@ function App() {
   //     await appWindow.hide(); // 隐藏窗口
   //   });
   // };
-
 
   // 初始化
   useEffect(() => {
@@ -333,6 +343,18 @@ function App() {
                       ? `${connection.devices?.length}台设备在线`
                       : '未连接'}{' '}
                   </div>
+                </div>
+              </Chip>
+            </div>
+            <div className="mt-2 cursor-pointer">
+              <Chip variant="flat">
+                <div
+                  onClick={() => {
+                    initConnection();
+                  }}
+                  className="flex gap-2 items-center"
+                >
+                  重试
                 </div>
               </Chip>
             </div>
