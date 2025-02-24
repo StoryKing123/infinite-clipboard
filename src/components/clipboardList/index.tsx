@@ -1,9 +1,14 @@
 import { Button, Image, Listbox, ListboxItem } from '@heroui/react';
 import type { Selection } from '@heroui/react';
 import { useAtom } from 'jotai';
-import { baseClipboardAtom, clipboardStore, deleteClipboard } from '../../store';
+import {
+  baseClipboardAtom,
+  clipboardStore,
+  deleteClipboard,
+} from '../../store';
 import Database from '@tauri-apps/plugin-sql';
-import { useDeferredValue, useMemo, useState } from 'react';
+import { throttle } from 'es-toolkit';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 
 interface ClipboardListProps {
   db: Database | undefined;
@@ -14,13 +19,36 @@ const ClipboardList = ({ db }: ClipboardListProps) => {
   const [selectedKeys, setSelectedKeys] = useState(new Set<string>([]));
   const [, deleteClip] = useAtom(deleteClipboard);
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [listboxHeight, setListboxHeight] = useState(400); // 初始值设为400
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (containerRef.current) {
+        const newHeight = containerRef.current.clientHeight;
+        setListboxHeight(newHeight); // 更新高度状态
+        console.log('窗口改变，新高度:', newHeight);
+      }
+    };
+
+    // 立即获取初始高度
+    handleResize();
+
+    const throttleHandleResize = throttle(handleResize, 1000);
+
+    // 监听窗口 resize 事件
+    window.addEventListener('resize', throttleHandleResize);
+
+    return () => {
+      window.removeEventListener('resize', throttleHandleResize);
+    };
+  }, []);
+
   const selectedValue = useMemo(
     () => Array.from(selectedKeys).join(', '),
     [selectedKeys]
   );
-  const deferredClipboard = useDeferredValue(clipboard)
-
- 
+  const deferredClipboard = useDeferredValue(clipboard);
 
   const handleClearAllHistory = async () => {
     // await db?.execute('DELETE FROM clipboard');
@@ -32,7 +60,7 @@ const ClipboardList = ({ db }: ClipboardListProps) => {
     // setClipboard(
     //   clipboard.filter(item => !selectedKeys.has(item.id.toString()))
     // );
-    deleteClip([...selectedKeys])
+    deleteClip([...selectedKeys]);
   };
 
   const handleSelectionChange = (keys: Selection) => {
@@ -60,8 +88,7 @@ const ClipboardList = ({ db }: ClipboardListProps) => {
           清除全部
         </Button>
       </div>
-      <div className="flex-1 mt-2">
-       
+      <div ref={containerRef} className="flex-1 mt-2">
         <Listbox
           //  disallowEmptySelection
           // aria-label="Multiple selection example"
@@ -71,8 +98,9 @@ const ClipboardList = ({ db }: ClipboardListProps) => {
           onSelectionChange={handleSelectionChange}
           isVirtualized
           virtualization={{
-            maxListboxHeight:400,
-            itemHeight:40
+            maxListboxHeight: listboxHeight,
+            // maxListboxHeight: 651,
+            itemHeight: 40,
           }}
         >
           {deferredClipboard.map((item, index) => (
@@ -82,6 +110,7 @@ const ClipboardList = ({ db }: ClipboardListProps) => {
               onPress={async e => {}}
               key={item.id}
               textValue={item.id}
+              className="truncate"
             >
               {item.type === 0 && item.content}
               {item.type === 1 && (

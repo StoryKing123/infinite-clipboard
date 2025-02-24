@@ -1,5 +1,6 @@
 mod commands;
 
+use rand_core::OsRng;
 use serde_json::{json, to_string};
 use tauri::{
     http::{self, Response},
@@ -14,6 +15,7 @@ use tauri_nspanel::{
 };
 use tauri_plugin_log::{Target, TargetKind};
 use tauri_plugin_sql::{Migration, MigrationKind};
+use x25519_dalek::{EphemeralSecret, PublicKey, SharedSecret};
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -236,4 +238,11 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+pub fn generate_x25519_key_secret() {
+    // let secret = SharedSecret::
+    let public = PublicKey::from(&secret);
+
+    // let secret_bytes = 
 }

@@ -304,7 +304,13 @@ function App() {
               color="primary"
               href="#"
               variant="flat"
-              onPress={handleGithubLogin}
+              onPress={() => {
+                if (auth && auth.email) {
+                  handleGithubLogin();
+                } else {
+                  initConnection();
+                }
+              }}
             >
               登录
             </Button>
@@ -350,11 +356,17 @@ function App() {
               <Chip variant="flat">
                 <div
                   onClick={() => {
-                    initConnection();
+                    // initConnection();
+                    // debugger
+                    if (auth && auth.email) {
+                      initConnection();
+                    } else {
+                      handleGithubLogin();
+                    }
                   }}
                   className="flex gap-2 items-center"
                 >
-                  重试
+                  {auth && auth.email ? '重试' : '登录'}
                 </div>
               </Chip>
             </div>

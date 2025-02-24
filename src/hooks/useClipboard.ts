@@ -102,20 +102,11 @@ export const useClipboard = () => {
                 type: 0,
                 created_at: new Date().toISOString(),
             }])
-            sendClipboardBroadcast(0, newText)
+            if (connection?.status === 1) {
+                sendClipboardBroadcast(0, newText)
 
+            }
 
-            // if (res && res.lastInsertId) {
-            //     setClipboard(prev => [
-            //         {
-            //             id: `${res.lastInsertId!}`,
-            //             content: newText,
-            //             type: 0,
-            //             created_at: new Date().toISOString(),
-            //         },
-            //         ...prev,
-            //     ]);
-            // }
         });
 
         unlistenImageUpdate.current = await onImageUpdate(async newImage => {
@@ -135,11 +126,10 @@ export const useClipboard = () => {
             }
 
             insert([{ content: newImage, created_at: new Date().toISOString(), type: 1 }])
-            sendClipboardBroadcast(1, newImage)
-            // const res = await db.current?.execute(
-            //     'INSERT INTO clipboard (content, created_at) VALUES (?, ?, 1)',
-            //     [newImage, new Date().toISOString()]
-            // );
+            if (connection?.status === 1) {
+                sendClipboardBroadcast(1, newImage)
+
+            }
         })
 
         unlistenClipboard.current = await startListening();
@@ -201,7 +191,7 @@ export const useClipboard = () => {
 
 
     //     return () => {
-    
+
     //         unlistenClipboard.current?.();
     //         unlistenTextUpdate.current?.();
     //         unlistenImageUpdate.current?.();

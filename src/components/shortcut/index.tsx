@@ -11,6 +11,11 @@ import {
 } from '@tauri-apps/plugin-global-shortcut';
 import { invoke } from '@tauri-apps/api/core';
 import { useImmer } from 'use-immer';
+type ShortCutType = {
+  label: string;
+  action: string;
+  key: undefined | string;
+};
 
 const Shortcut = () => {
   const [isRecording, setIsRecording] = useState(false);
@@ -22,41 +27,38 @@ const Shortcut = () => {
   const previousShortcut = useRef<SettingAtom['shortcut']>(undefined);
   //   const currentAction = useRef<string>(undefined);
   const [currentAction, setCurrentAction] = useState<string>();
-    useEffect(() => {
-  //     console.log('update setting shortcut');
-  //     previousShortcut.current = setting.shortcut;
+  useEffect(() => {
+    if (setting?.shortcut?.showOrHideClipboard?.key) {
+      setShortcut(setting.shortcut.showOrHideClipboard.key);
+      setShortcutList(draft => {
+        const showOrHideClipboard = draft.find(
+          item => item.action === 'showOrHideClipboard'
+        );
+        if (showOrHideClipboard) {
+          showOrHideClipboard.key = setting.shortcut.showOrHideClipboard!.key!;
+        }
+      });
+    }
+    if (setting?.shortcut?.showOrHideSetting?.key) {
+      setShortcutList(draft => {
+        const showOrHideSettingItem = draft.find(
+          item => item.action === 'showOrHideSetting'
+        )!;
+        showOrHideSettingItem.key = setting.shortcut.showOrHideSetting!.key!;
+      });
+    }
+  }, [setting?.shortcut]);
 
-      if (setting?.shortcut?.showOrHideClipboard?.key) {
-        setShortcut(setting.shortcut.showOrHideClipboard.key);
-        setShortcutList(draft => {
-          const showOrHideClipboard = draft.find(
-            item => item.action === 'showOrHideClipboard'
-          );
-          if (showOrHideClipboard) {
-            showOrHideClipboard.key = setting.shortcut.showOrHideClipboard!.key!;
-          }
-        });
-      }
-      if (setting?.shortcut?.showOrHideSetting?.key) {
-        setShortcutList(draft => {
-          const showOrHideSettingItem = draft.find(
-            item => item.action === 'showOrHideSetting'
-          )!;
-          showOrHideSettingItem.key = setting.shortcut.showOrHideSetting!.key!;
-        });
-      }
-    }, [setting?.shortcut]);
-
-  const [shortcutList, setShortcutList] = useImmer([
+  const [shortcutList, setShortcutList] = useImmer<ShortCutType[]>([
     {
       label: '显示或隐藏剪贴板',
       action: 'showOrHideClipboard',
-      key: '',
+      key: undefined,
     },
     {
       label: '显示或隐藏设置面板',
       action: 'showOrHideSetting',
-      key: '',
+      key: undefined,
     },
   ]);
   // 注册快捷键
@@ -151,8 +153,6 @@ const Shortcut = () => {
     };
 
     const updateDisplay = () => {
-      console.log('update');
-      console.log(keysPressed.current);
       const keys = Array.from(keysPressed.current)
         // .sort((a, b) => a.localeCompare(b)) // 排序保证顺序一致
         .join('+');
@@ -176,17 +176,17 @@ const Shortcut = () => {
             ...setting,
             shortcut: {
               ...setting.shortcut,
-              [currentAction]: {key:shortcutRef.current},
+              [currentAction]: { key: shortcutRef.current },
             },
           }));
           console.log({
             ...setting,
             shortcut: {
               ...setting.shortcut,
-              [currentAction]: {key:shortcutRef.current},
+              [currentAction]: { key: shortcutRef.current },
             },
-          })
-        //   debugger
+          });
+          //   debugger
 
           //       if (
           //         previousShortcut.current?.[
@@ -208,13 +208,13 @@ const Shortcut = () => {
           //         }
           //       }
 
-                // const bindEvent = shortcutList.find(
-                //   item => item.action === currentAction
-                // )?.event;
+          // const bindEvent = shortcutList.find(
+          //   item => item.action === currentAction
+          // )?.event;
 
-                // if (bindEvent) {
-                //   await register(shortcutRef.current, bindEvent);
-                // }
+          // if (bindEvent) {
+          //   await register(shortcutRef.current, bindEvent);
+          // }
         }
 
         //     // console.log('unbind and bind');
@@ -276,19 +276,17 @@ const Shortcut = () => {
   //   }, []);
 
   const handleBindingAction = (action: string) => {
-    // startRecord(shortcut.action)
     if (!setIsRecording) return;
     setIsRecording(true);
     setCurrentAction(action);
-    // currentAction.current = koction;
   };
   const renderCurrentKbd = (shortcut: (typeof shortcutList)[number]) => {
     if (isRecording && currentAction === shortcut.action)
       return <span>录制中</span>;
     else if (isRecording && currentAction !== shortcut.action) {
-      return <span>{shortcut.key}</span>;
+      return <span>{shortcut.key ?? '按下快捷键'}</span>;
     } else if (!isRecording) {
-      return <span>{shortcut.key}</span>;
+      return <span>{shortcut.key ?? '按下快捷键'}</span>;
     }
     return <></>;
   };
@@ -298,10 +296,12 @@ const Shortcut = () => {
     <div>
       快捷键
       <Listbox
-        classNames={{
-          //   base: 'max-w-xs',
-          // list: 'max-h-[300px] overflow-scroll',
-        }}
+        classNames={
+          {
+            //   base: 'max-w-xs',
+            // list: 'max-h-[300px] overflow-scroll',
+          }
+        }
         // selectionMode="multiple"
         // topContent={topContent}
         // variant="flat"
@@ -331,10 +331,6 @@ const Shortcut = () => {
             endContent={
               <Kbd onClick={() => handleBindingAction(shortcut.action)}>
                 {renderCurrentKbd(shortcut)}
-                {/* {isRecording &&
-                  currentAction === shortcut.action &&
-                  shortcut.key}
-                  {!isRecording && shortcut.key} */}
               </Kbd>
             }
           ></ListboxItem>

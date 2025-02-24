@@ -12,6 +12,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { UnlistenFn } from '@tauri-apps/api/event';
 import { useTheme } from '../hooks';
 import { writeImageBase64, writeText } from 'tauri-plugin-clipboard-api';
+import { throttle } from 'es-toolkit';
 
 const Clipboard = () => {
   const focusedUnlisten = useRef<UnlistenFn | undefined>(undefined);
@@ -21,6 +22,9 @@ const Clipboard = () => {
   const [isProgrammaticClipboard, setIsProgrammaticClipboard] = useAtom(
     isProgrammaticClipboardStore
   );
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [listboxHeight, setListboxHeight] = useState(400); // 初始值设为400
+
   const handleKeyDown: KeyboardEventHandler<HTMLUListElement> = e => {};
   const initFocusEvent = async () => {
     const currentWindow = await getCurrentWindow();
@@ -44,6 +48,29 @@ const Clipboard = () => {
       window.removeEventListener('blur', () => invoke('hide_panel'));
     };
   };
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (containerRef.current) {
+        const newHeight = containerRef.current.clientHeight;
+        setListboxHeight(newHeight); // 更新高度状态
+        console.log('窗口改变，新高度:', newHeight);
+      }
+    };
+
+    // 立即获取初始高度
+    handleResize();
+
+    const throttleHandleResize = throttle(handleResize, 1000);
+
+    // 监听窗口 resize 事件
+    window.addEventListener('resize', throttleHandleResize);
+
+    return () => {
+      window.removeEventListener('resize', throttleHandleResize);
+    };
+  }, []);
+
   const dragEvent = (e: MouseEvent) => {
     // debugger
     if (e.buttons === 1) {
@@ -136,73 +163,75 @@ const Clipboard = () => {
         value={searchText}
         onChange={e => setSearchText(e.target.value)}
       />
-      <Listbox
-        onKeyDown={handleKeyDown}
-        className="flex-1 overflow-y-auto"
-        aria-label="Actions"
-        isVirtualized
+      <div className='flex-1' ref={containerRef}>
+        <Listbox
+          onKeyDown={handleKeyDown}
+          className="flex-1 overflow-y-auto truncate"
+          aria-label="Actions"
+          isVirtualized
           virtualization={{
-          maxListboxHeight: 400,
-          itemHeight: 40,
+            maxListboxHeight: listboxHeight,
+            itemHeight: 40,
           }}
-        // onAction={key => alert(key)}
-      >
-        {filteredClipboard.map((item, index) => (
-          <ListboxItem
-            id={item.id.toString()}
-            data-index={index}
-            onPress={async e => {
-              const item =
-                clipboard[
-                  e.target.getAttribute('data-index') as unknown as number
-                ];
-              if (item) {
-                invoke('hide_panel');
-                if (item.type === 0) {
-                  await writeText(item.content);
-                } else if (item.type === 1) {
-                  await writeImageBase64(item.content);
-                }
+          // onAction={key => alert(key)}
+        >
+          {filteredClipboard.map((item, index) => (
+            <ListboxItem
+              id={item.id.toString()}
+              data-index={index}
+              onPress={async e => {
+                const item =
+                  clipboard[
+                    e.target.getAttribute('data-index') as unknown as number
+                  ];
+                if (item) {
+                  invoke('hide_panel');
+                  if (item.type === 0) {
+                    await writeText(item.content);
+                  } else if (item.type === 1) {
+                    await writeImageBase64(item.content);
+                  }
 
-                try {
-                  setIsProgrammaticClipboard(true);
-                  await invoke('paste');
-                  setTimeout(() => {
+                  try {
+                    setIsProgrammaticClipboard(true);
+                    await invoke('paste');
+                    setTimeout(() => {
+                      setIsProgrammaticClipboard(false);
+                    }, 500);
+                  } catch (error) {
                     setIsProgrammaticClipboard(false);
-                  }, 500);
-                } catch (error) {
-                  setIsProgrammaticClipboard(false);
+                  }
                 }
-              }
 
-              // invoke('sendText', {
-              //   name: clipboard[
-              //     e.target.getAttribute('data-index') as unknown as number
-              //   ].content,
-              // });
+                // invoke('sendText', {
+                //   name: clipboard[
+                //     e.target.getAttribute('data-index') as unknown as number
+                //   ].content,
+                // });
 
-              // writeText(clipboard[e.target.getAttribute('data-index') as unknown as number].content)
-            }}
-            key={item.id}
-          >
-            {item.type === 0 && (
-              <span
-              // className=' whitespace-nowrap  overflow-hidden text-ellipsis'
-              >
-                {item.content}
-              </span>
-            )}
-            {item.type === 1 && (
-              <Image
-                width={100}
-                src={`data:image/png;base64,${item.content}`}
-              ></Image>
-            )}
+                // writeText(clipboard[e.target.getAttribute('data-index') as unknown as number].content)
+              }}
+              key={item.id}
+            >
+              {item.type === 0 && (
+                <span
+                // className=' whitespace-nowrap  overflow-hidden text-ellipsis'
+                >
+                  {item.content}
+                </span>
+              )}
+              {item.type === 1 && (
+                <Image
+                  width={100}
+                  src={`data:image/png;base64,${item.content}`}
+                ></Image>
+              )}
 
-            {/* {item.content} */}
-          </ListboxItem>
-        ))}
-      </Listbox>
+              {/* {item.content} */}
+            </ListboxItem>
+          ))}
+        </Listbox>
+      </div>
     </div>
   );
 };

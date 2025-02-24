@@ -9,9 +9,8 @@ const Device = () => {
     <div>
       <Listbox
         classNames={{
-        //   base: 'max-w-xs',
-          // list: 'max-h-[300px] overflow-scroll',
         }}
+        emptyContent="未连接到服务器，请重试" 
         defaultSelectedKeys={['1']}
         // items={connection?.devices}
         label="Assigned to"
