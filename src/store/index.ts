@@ -123,7 +123,7 @@ baseClipboardAtom.onMount = setupClipboardSync().onMount;
 export const connectionStore = atom<ConnectionAtom>();
 // export const 
 
-export const settingStore = atomWithStorage<SettingAtom>("setting", {
+export const settingStore = atomWithStorage<SettingAtom>("setting",{
   id: nanoid(10),
   theme: "light",
   language: 'zh-cn',

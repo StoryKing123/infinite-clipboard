@@ -27,8 +27,10 @@ tauri-plugin-sql = { version = "2.2.0", features = ["sqlite"] }
 tauri-plugin-http = "2"
 tauri-plugin-log = "2.0.0"
 enigo = "0.3.0"
-x25519-dalek = { version = "2.0.1" ,features = ["static_secrets"]}
-rand_core = { version = "0.6.4", features = ["getrandom"]}
+x25519-dalek = { version = "2.0.1" ,features = ["static_secrets"] }
+rand_core = { version = "0.6.4", features = ["getrandom"] }
+base64 = "0.22.1"
+aes-gcm = "0.10.3"
 [target.'cfg(target_os = "macos")'.dependencies]
 tauri-nspanel = { git = "https://github.com/ahkohd/tauri-nspanel", branch = "v2" }
 

@@ -1,6 +1,8 @@
 mod commands;
 
+use base64::{prelude::BASE64_STANDARD, Engine};
 use rand_core::OsRng;
+use serde::Serialize;
 use serde_json::{json, to_string};
 use tauri::{
     http::{self, Response},
@@ -234,29 +236,16 @@ pub fn run() {
             hide_panel,
             close_panel,
             exit_app,
-            commands::send::paste
+            commands::send::paste,
+            commands::encrypt::generate_x25519_key_secret,
+            commands::encrypt::calc_shared_secret
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
 
+#[derive(Serialize, Clone, Debug)]
 struct KeySecretBytes {
-    secret_bytes:[u8;32],
-    key_bytes:[u8;32]
+    secret_bytes: [u8; 32],
+    key_bytes: [u8; 32],
 }
-
-pub fn generate_x25519_key_secret() ->KeySecretBytes {
-    let secret = StaticSecret::random_from_rng(OsRng);
-    let public_key = PublicKey::from(&secret);
-
-    let secret_bytes = secret.as_bytes();
-    let publilc_key_bytes = public_key.as_bytes();
-
-    let res = KeySecretBytes  {
-        secret_bytes:*secret_bytes,
-        key_bytes:*publilc_key_bytes
-    };
-    return res;
-}
-
-
