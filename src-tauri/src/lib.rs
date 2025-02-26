@@ -15,7 +15,7 @@ use tauri_nspanel::{
 };
 use tauri_plugin_log::{Target, TargetKind};
 use tauri_plugin_sql::{Migration, MigrationKind};
-use x25519_dalek::{EphemeralSecret, PublicKey, SharedSecret};
+use x25519_dalek::{EphemeralSecret, PublicKey, SharedSecret, StaticSecret};
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -240,9 +240,23 @@ pub fn run() {
         .expect("error while running tauri application");
 }
 
-pub fn generate_x25519_key_secret() {
-    // let secret = SharedSecret::
-    let public = PublicKey::from(&secret);
-
-    // let secret_bytes = 
+struct KeySecretBytes {
+    secret_bytes:[u8;32],
+    key_bytes:[u8;32]
 }
+
+pub fn generate_x25519_key_secret() ->KeySecretBytes {
+    let secret = StaticSecret::random_from_rng(OsRng);
+    let public_key = PublicKey::from(&secret);
+
+    let secret_bytes = secret.as_bytes();
+    let publilc_key_bytes = public_key.as_bytes();
+
+    let res = KeySecretBytes  {
+        secret_bytes:*secret_bytes,
+        key_bytes:*publilc_key_bytes
+    };
+    return res;
+}
+
+
