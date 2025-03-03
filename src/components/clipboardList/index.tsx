@@ -53,6 +53,7 @@ const ClipboardList = ({ db }: ClipboardListProps) => {
   const handleClearAllHistory = async () => {
     // await db?.execute('DELETE FROM clipboard');
     // setClipboard([]);
+    deleteClip([])
   };
 
   const handleClearHistory = async () => {

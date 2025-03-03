@@ -7,6 +7,7 @@ import {HeroUIProvider} from "@heroui/react";
 import { ToastContainer, toast } from "react-toastify";
 import { BrowserRouter, Route, Routes } from "react-router";
 import ClipboardList from "./pages/clipboard";
+import RegisterPage from "./pages/login";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   // <React.StrictMode>
@@ -15,6 +16,7 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
     <Routes>
       <Route path="/" element={<App />} />
       <Route path="/clipboard" element={<ClipboardList />} />
+      <Route path="/callback" element={<RegisterPage />} />
     </Routes>
       {/* <App /> */}
     </BrowserRouter>

@@ -5,6 +5,7 @@ import logo from './assets/icon.png';
 import { listen } from '@tauri-apps/api/event';
 import { useAtom } from 'jotai';
 import {
+  appAtom,
   authStore,
   connectionStore,
   insertClipboard,
@@ -46,6 +47,20 @@ function App() {
   const [connection, setConnection] = useAtom(connectionStore);
   const { clipboard: clipboardData, insertClipbaord } = useClipboard();
   const [, insert] = useAtom(insertClipboard);
+  const [app, setApp] = useAtom(appAtom);
+  const initAtom = async () => {
+    console.log('atom:!');
+    const res = (await invoke(
+      'generate_x25519_key_secret'
+    )) as invokeGenerateX25519KeySecretRes;
+    console.log(res);
+    setApp({ secretBase64: res.secret, publicKeyBase64: res.key });
+  };
+  useEffect(() => {
+    if (!app) {
+      initAtom();
+    }
+  }, [app]);
 
   useTheme();
   useLanguage();
@@ -58,8 +73,22 @@ function App() {
 
   // 处理 GitHub 登录
   const handleGithubLogin = async () => {
+    const auth0Domain = 'dev-gc80uo0lkw38p6fm.us.auth0.com';
+    const auth0ClientId = 'iYJHTznuBHb33JBGxjTbNKG8pMiJCqaj';
+    const redirectUri = encodeURIComponent(
+      window.location.origin + '/callback'
+    );
+    // const redirectUri = encodeURIComponent('http://localhost:3000/auth/callback' );
+
+    console.log(redirectUri);
+    // debugger
+
+    const auth0Url = `https://${auth0Domain}/authorize?response_type=code&client_id=${auth0ClientId}&redirect_uri=${redirectUri}&scope=openid%20profile%20email`;
+    // window.location.href = auth0Url;
+
     new WebviewWindow('github-oauth', {
-      url: 'https://github.com/login/oauth/authorize?scope=user:email&client_id=Ov23lix14xI8yCaYz8cP',
+      // url: 'https://github.com/login/oauth/authorize?scope=user:email&client_id=Ov23lix14xI8yCaYz8cP',
+      url: auth0Url,
       title: 'GitHub Login',
       width: 800,
       height: 600,
@@ -103,7 +132,7 @@ function App() {
       // `http://localhost:3000/events/connect?room_id=${auth?.email}&client_id=${clientid}`,
       `${import.meta.env.VITE_API_URL}/events/connect?room_id=${
         auth?.email
-      }&client_id=${clientid}`,
+      }&client_id=${clientid}&public_key=${app.publicKeyBase64}`,
       {
         Authorization: `Bearer 321321`,
       }
@@ -247,10 +276,10 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (auth?.email) {
+    if (auth?.email && app.publicKeyBase64) {
       initConnection();
     }
-  }, [auth?.email]);
+  }, [auth?.email, app.publicKeyBase64]);
 
   const initEvent = async () => {};
 
@@ -352,24 +381,24 @@ function App() {
                 </div>
               </Chip>
             </div>
-            <div className="mt-2 cursor-pointer">
-              <Chip variant="flat">
-                <div
-                  onClick={() => {
-                    // initConnection();
-                    // debugger
-                    if (auth && auth.email) {
-                      initConnection();
-                    } else {
-                      handleGithubLogin();
-                    }
-                  }}
-                  className="flex gap-2 items-center"
-                >
-                  {auth && auth.email ? '重试' : '登录'}
-                </div>
-              </Chip>
-            </div>
+            {connection?.status !== 1 && (
+              <div className="mt-2 cursor-pointer">
+                <Chip variant="flat">
+                  <div
+                    onClick={() => {
+                      if (auth && auth.email) {
+                        initConnection();
+                      } else {
+                        handleGithubLogin();
+                      }
+                    }}
+                    className="flex gap-2 items-center"
+                  >
+                    {auth && auth.email ? '重试' : '登录'}
+                  </div>
+                </Chip>
+              </div>
+            )}
           </div>
         </nav>
 

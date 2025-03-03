@@ -12,8 +12,8 @@ pub fn generate_x25519_key_secret() -> KeySecretBytes {
     let publilc_key_bytes = public_key.as_bytes();
 
     let res = KeySecretBytes {
-        secret_bytes: *secret_bytes,
-        key_bytes: *publilc_key_bytes,
+        secret: BASE64_STANDARD.encode(*secret_bytes),
+        key: BASE64_STANDARD.encode(*publilc_key_bytes) ,
     };
     return res;
 }

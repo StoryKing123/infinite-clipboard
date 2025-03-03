@@ -246,6 +246,6 @@ pub fn run() {
 
 #[derive(Serialize, Clone, Debug)]
 struct KeySecretBytes {
-    secret_bytes: [u8; 32],
-    key_bytes: [u8; 32],
+    secret: String,
+    key: String,
 }

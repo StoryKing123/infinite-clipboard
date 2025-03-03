@@ -8,10 +8,6 @@ declare type AuthAtom = {
   email: string;
 };
 
-// declare type ClipboardAtom = {
-//     content: string;
-//     created_at: string;
-// }
 
 declare type ClipboardEntry = {
   id: string;
@@ -25,10 +21,15 @@ declare type SettingAtom = {
   theme: Theme;
   language: string;
   shortcut: {
-    showOrHideClipboard?: { key?: string; event?: ShortcutHandler},
+    showOrHideClipboard?: { key?: string; event?: ShortcutHandler },
     showOrHideSetting?: { key?: string; event?: ShortcutHandler },
   }
 };
+
+declare type AppAtom = {
+  publicKeyBase64?: string,
+  secretBase64?: string
+}
 
 declare type ShortcutAtom = {
   key?: string;
@@ -46,3 +47,8 @@ declare type ConnectionAtom = {
 
 
 declare type Theme = "light" | "dark";
+
+declare type invokeGenerateX25519KeySecretRes = {
+  key: string,
+  secret: string
+}
