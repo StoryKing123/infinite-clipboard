@@ -24,7 +24,7 @@ export default function CallbackPage() {
       const res = await request.post('/auth/callback', { code: code });
       console.log(res);
       if (res.status === 200) {
-        setAuth({ email: res.data.email, token: res.data.access_token });
+        setAuth({ email: res.data.email, token: res.data.token });
       }
 
       // const response = await fetch('/api/auth/callback', {

@@ -44,7 +44,7 @@ export const useClipboard = () => {
     const sendClipboardBroadcast = (type: number, data: string) => {
         const roomId = connectionRef.current?.room;
         const deviceId = settingRef.current.id;
-        request.post(`events/broadcast/${roomId}/${deviceId}`, { message: { data: data, type: type } })
+        request.post(`events/broadcast/${deviceId}`, { message: { data: data, type: type } })
     }
 
     const initDBInstance = async () => {

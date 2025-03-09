@@ -35,6 +35,7 @@ import UserSVG from './assets/user.svg';
 import Device from './components/device';
 import Shortcut from './components/shortcut';
 import { useShortcut } from './hooks/useShortcut';
+import request from './request';
 
 function App() {
   const [auth, setAuth] = useAtom(authStore);
@@ -134,7 +135,7 @@ function App() {
         auth?.email
       }&client_id=${clientid}&public_key=${app.publicKeyBase64}`,
       {
-        Authorization: `Bearer 321321`,
+        Authorization: `Bearer ${auth?.token}`,
       }
     );
     events.addEventListener('connection', function (event) {
@@ -148,12 +149,10 @@ function App() {
         status: 1,
         devices: initRes.devices,
       });
-      axios
+      request
         .get(
           // `http://localhost:3000/events/connection/update/${auth?.email}/${clientid}`
-          `${import.meta.env.VITE_API_URL}/events/connection/update/${
-            auth?.email
-          }/${clientid}`
+          `${import.meta.env.VITE_API_URL}/events/connection/update/${clientid}`
         )
         .then(res => {
           console.log(res);
@@ -191,6 +190,7 @@ function App() {
     //   const text = new TextDecoder().decode(value);
     //   console.log("Received:", text);
     // }
+    
     events.onerror = async event => {
       console.log(event);
       toast.error('连接失败');
